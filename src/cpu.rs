@@ -59,11 +59,13 @@ impl RP2A03 {
 
         let opcode = OpCode::from(self.memory.read(pc as u16));
 
-        match opcode {
-            OpCode::Nop => opcode::nop(&mut self.registers, &mut self.memory),
-            OpCode::LdaImm => opcode::lda_imm(&mut self.registers, &mut self.memory),
+        let opcode_fn = match opcode {
+            OpCode::Nop => opcode::nop,
+            OpCode::LdaImm => opcode::lda_imm,
             _ => unimplemented!(),
-        }
+        };
+
+        opcode_fn(&mut self.registers, &mut self.memory);
 
         self.registers.pc += (1 + opcode.operands_num());
         self.current_cycles += opcode.cycles_num() as u32;

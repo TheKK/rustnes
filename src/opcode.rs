@@ -3,23 +3,23 @@ use std::convert::From;
 use cpu::Registers;
 use cpu::Memory;
 
-pub fn nop(_registers: &mut Registers, _mem: &mut Memory) {}
+fn nop(_registers: &mut Registers, _mem: &mut Memory) {}
 
-pub fn lda_imm(registers: &mut Registers, mem: &mut Memory) {
+fn lda_imm(registers: &mut Registers, mem: &mut Memory) {
     let pc = &registers.pc;
     let val = mem.read((pc + 1) as u16);
 
     registers.a = val;
 }
 
-pub fn lda_zero_page(registers: &mut Registers, mem: &mut Memory) {
+fn lda_zero_page(registers: &mut Registers, mem: &mut Memory) {
     let pc = &registers.pc;
     let addr = mem.read((pc + 1) as u16);
 
     registers.a = mem.read(addr as u16);
 }
 
-pub fn lda_zero_page_x(registers: &mut Registers, mem: &mut Memory) {
+fn lda_zero_page_x(registers: &mut Registers, mem: &mut Memory) {
     let pc = &registers.pc;
     let x = &registers.x;
     let addr = mem.read((pc + 1) as u16) + x;
@@ -27,7 +27,7 @@ pub fn lda_zero_page_x(registers: &mut Registers, mem: &mut Memory) {
     registers.a = mem.read(addr as u16);
 }
 
-pub fn lda_abs(registers: &mut Registers, mem: &mut Memory) {
+fn lda_abs(registers: &mut Registers, mem: &mut Memory) {
     let pc = &registers.pc;
     let addr_low = mem.read((pc + 1) as u16) as u16;
     let addr_high = mem.read((pc + 2) as u16) as u16;

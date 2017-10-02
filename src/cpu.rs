@@ -136,6 +136,28 @@ mod test {
         }
 
         #[test]
+        fn lda_abs() {
+            let mut cpu = RP2A03::new();
+            cpu.memory.write(0, OpCode::LdaAbs.into());
+            // LDA $0102, note the order.
+            cpu.memory.write(1, 0x02);
+            cpu.memory.write(2, 0x01);
+            cpu.memory.write(0x0102, 0x42);
+
+            let mem_snapshot = cpu.memory.clone();
+            let regs_snaptshot = cpu.registers.clone();
+
+            cpu.execute();
+
+            assert_eq!(cpu.memory, mem_snapshot);
+            assert_eq!(cpu.registers.a, 0x42);
+            assert_eq!(cpu.registers.p, regs_snaptshot.p);
+            assert_eq!(cpu.registers.sp, regs_snaptshot.sp);
+            assert_eq!(cpu.registers.x, regs_snaptshot.x);
+            assert_eq!(cpu.registers.y, regs_snaptshot.y);
+        }
+
+        #[test]
         fn nop() {
             let mut cpu = RP2A03::new();
             cpu.memory.write(0, OpCode::Nop.into());

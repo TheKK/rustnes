@@ -58,12 +58,7 @@ impl RP2A03 {
         let pc = self.registers.pc;
 
         let opcode = OpCode::from(self.memory.read(pc as u16));
-
-        let opcode_fn = match opcode {
-            OpCode::Nop => opcode::nop,
-            OpCode::LdaImm => opcode::lda_imm,
-            _ => unimplemented!(),
-        };
+        let opcode_fn = opcode.get_fn();
 
         opcode_fn(&mut self.registers, &mut self.memory);
 
@@ -84,6 +79,26 @@ mod test {
             let mut cpu = RP2A03::new();
             cpu.memory.write(0, OpCode::LdaImm.into());
             cpu.memory.write(1, 0x42);
+
+            let mem_snapshot = cpu.memory.clone();
+            let regs_snaptshot = cpu.registers.clone();
+
+            cpu.execute();
+
+            assert_eq!(cpu.memory, mem_snapshot);
+            assert_eq!(cpu.registers.a, 0x42);
+            assert_eq!(cpu.registers.p, regs_snaptshot.p);
+            assert_eq!(cpu.registers.sp, regs_snaptshot.sp);
+            assert_eq!(cpu.registers.x, regs_snaptshot.x);
+            assert_eq!(cpu.registers.y, regs_snaptshot.y);
+        }
+
+        #[test]
+        fn lda_zero_page() {
+            let mut cpu = RP2A03::new();
+            cpu.memory.write(0, OpCode::LdaZeroPage.into());
+            cpu.memory.write(1, 0x02);
+            cpu.memory.write(2, 0x42);
 
             let mem_snapshot = cpu.memory.clone();
             let regs_snaptshot = cpu.registers.clone();

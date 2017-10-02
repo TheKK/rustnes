@@ -16,11 +16,19 @@ pub fn lda_zero_page(registers: &mut Registers, mem: &mut Memory) {
 
     registers.a = mem.read(addr as u16);
 }
+pub fn lda_zero_page_x(registers: &mut Registers, mem: &mut Memory) {
+    let pc = &registers.pc;
+    let x = &registers.x;
+    let addr = mem.read((pc + 1) as u16) + x;
+
+    registers.a = mem.read(addr as u16);
+}
 
 pub enum OpCode {
     Nop,
     LdaImm,
     LdaZeroPage,
+    LdaZeroPageX,
 }
 
 impl OpCode {
@@ -28,8 +36,8 @@ impl OpCode {
         match self {
             &OpCode::LdaImm => 1,
             &OpCode::LdaZeroPage => 1,
+            &OpCode::LdaZeroPageX => 1,
             &OpCode::Nop => 0,
-            _ => unimplemented!(),
         }
     }
 
@@ -37,8 +45,8 @@ impl OpCode {
         match self {
             &OpCode::LdaImm => 2,
             &OpCode::LdaZeroPage => 3,
+            &OpCode::LdaZeroPageX => 4,
             &OpCode::Nop => 2,
-            _ => unimplemented!(),
         }
     }
 
@@ -46,8 +54,8 @@ impl OpCode {
         match self {
             &OpCode::LdaImm => lda_imm,
             &OpCode::LdaZeroPage => lda_zero_page,
+            &OpCode::LdaZeroPageX => lda_zero_page_x,
             &OpCode::Nop => nop,
-            _ => unimplemented!(),
         }
     }
 }
@@ -71,7 +79,6 @@ macro_rules! impl_from_and_into {
                     $(
                         $opcode => $byte,
                     )*
-                    _ => unimplemented!(),
                 }
             }
         }
@@ -81,5 +88,6 @@ macro_rules! impl_from_and_into {
 impl_from_and_into! {
     OpCode::LdaImm => 0xA9,
     OpCode::LdaZeroPage => 0xA5,
+    OpCode::LdaZeroPageX => 0xB5,
     OpCode::Nop => 0xEA
 }

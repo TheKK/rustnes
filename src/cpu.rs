@@ -114,6 +114,28 @@ mod test {
         }
 
         #[test]
+        fn lda_zero_page_x() {
+            let mut cpu = RP2A03::new();
+            cpu.memory.write(0, OpCode::LdaZeroPageX.into());
+            cpu.memory.write(1, 0x00);
+            cpu.memory.write(2, 0x42);
+
+            cpu.registers.x = 0x02;
+
+            let mem_snapshot = cpu.memory.clone();
+            let regs_snaptshot = cpu.registers.clone();
+
+            cpu.execute();
+
+            assert_eq!(cpu.memory, mem_snapshot);
+            assert_eq!(cpu.registers.a, 0x42);
+            assert_eq!(cpu.registers.p, regs_snaptshot.p);
+            assert_eq!(cpu.registers.sp, regs_snaptshot.sp);
+            assert_eq!(cpu.registers.x, regs_snaptshot.x);
+            assert_eq!(cpu.registers.y, regs_snaptshot.y);
+        }
+
+        #[test]
         fn nop() {
             let mut cpu = RP2A03::new();
             cpu.memory.write(0, OpCode::Nop.into());

@@ -52,24 +52,34 @@ impl OpCode {
     }
 }
 
-impl From<u8> for OpCode {
-    fn from(byte: u8) -> OpCode {
-        match byte {
-            0xA9 => OpCode::LdaImm,
-            0xA5 => OpCode::LdaZeroPage,
-            0xEA => OpCode::Nop,
-            _ => unimplemented!(),
+macro_rules! impl_from_and_into {
+    ($($opcode: path => $byte: expr), *) => (
+        impl From<u8> for OpCode {
+            fn from(byte: u8) -> OpCode {
+                match byte {
+                    $(
+                        $byte => $opcode,
+                    )*
+                    _ => unimplemented!(),
+                }
+            }
         }
-    }
+
+        impl Into<u8> for OpCode {
+            fn into(self) -> u8 {
+                match self {
+                    $(
+                        $opcode => $byte,
+                    )*
+                    _ => unimplemented!(),
+                }
+            }
+        }
+    )
 }
 
-impl Into<u8> for OpCode {
-    fn into(self) -> u8 {
-        match self {
-            OpCode::LdaImm => 0xA9,
-            OpCode::LdaZeroPage => 0xA5,
-            OpCode::Nop => 0xEA,
-            _ => unimplemented!(),
-        }
-    }
+impl_from_and_into! {
+    OpCode::LdaImm => 0xA9,
+    OpCode::LdaZeroPage => 0xA5,
+    OpCode::Nop => 0xEA
 }

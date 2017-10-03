@@ -1,4 +1,3 @@
-use opcode;
 use opcode::OpCode;
 
 const MEM_ADDR_MAX: usize = 0xffff;

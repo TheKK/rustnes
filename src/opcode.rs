@@ -101,10 +101,21 @@ fn lda_abs(registers: &mut Registers, mem: &mut Memory) {
     registers.a = mem.read(addr);
 }
 
+fn lda_abs_x(registers: &mut Registers, mem: &mut Memory) {
+    let x = registers.x as u16;
+    let pc = &registers.pc;
+    let addr_low = mem.read((pc + 1) as u16) as u16;
+    let addr_high = mem.read((pc + 2) as u16) as u16;
+    let addr = (addr_high << 8) + addr_low + x;
+
+    registers.a = mem.read(addr);
+}
+
 opcodes!(
     (LdaImm, 0xA9, 1, 2, lda_imm),
     (LdaZeroPage, 0xA5, 1, 3, lda_zero_page),
     (LdaZeroPageX, 0xB5, 1, 4, lda_zero_page_x),
     (LdaAbs, 0xAD, 2, 4, lda_abs),
+    (LdaAbsX, 0xBD, 2, 4, lda_abs_x),
     (Nop, 0xEA, 0, 2, nop)
 );

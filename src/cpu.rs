@@ -96,6 +96,15 @@ mod test {
             cpu.memory.write(0x0102, 0x42);
         }
 
+        fn abs_x(cpu: &mut RP2A03) {
+            // ins $0401, note the order.
+            cpu.memory.write(1, 0x01);
+            cpu.memory.write(2, 0x04);
+            cpu.memory.write(0x0402, 0x42);
+
+            cpu.registers.x = 0x01;
+        }
+
         macro_rules! assert_field_eq (
             ($left: expr, $right: expr, [$($field: ident), *]) => {
                 $(
@@ -128,6 +137,7 @@ mod test {
         lda_test!(lda_zero_page, OpCode::LdaZeroPage, zero_page);
         lda_test!(lda_zero_page_x, OpCode::LdaZeroPageX, zero_page_x);
         lda_test!(lda_abs, OpCode::LdaAbs, abs);
+        lda_test!(lda_abs_x, OpCode::LdaAbsX, abs_x);
 
         #[test]
         fn nop() {

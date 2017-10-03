@@ -1,7 +1,7 @@
 use opcode;
 use opcode::OpCode;
 
-const MEM_ADDR_MAX: usize = 512;
+const MEM_ADDR_MAX: usize = 0xffff;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Registers {

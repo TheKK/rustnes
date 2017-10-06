@@ -1,6 +1,5 @@
-use super::Cycle;
-use super::OpCode;
-
+use opcode::Cycle;
+use opcode::OpCode;
 use opcode::utils::compose_addr;
 use opcode::utils::compose_indexed_addr;
 

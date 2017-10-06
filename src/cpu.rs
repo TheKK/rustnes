@@ -87,7 +87,7 @@ impl RP2A03 {
         }
     }
 
-    pub fn execute(&mut self) {
+    pub fn execute(&mut self) -> Cycle {
         let pc = self.registers.pc;
 
         let opcode = OpCode::from(self.memory.read(pc as u16));
@@ -97,5 +97,7 @@ impl RP2A03 {
 
         self.registers.pc += (1 + opcode.operands_num());
         self.current_cycles += cycles_num;
+
+        Cycle(cycles_num)
     }
 }

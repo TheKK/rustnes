@@ -14,6 +14,18 @@ fn lda_assign_register_a(registers: &mut Registers, val: u8) {
     registers.set_sign_flag(sign_flag);
 }
 
+#[inline]
+fn compose_indexed_addr(addr_high: u8, addr_low: u8, index: u8) -> (u16, bool) {
+    let addr_high = addr_high as u16;
+
+    let (addr, page_crossed) = match addr_low.overflowing_add(index) {
+        (addr_low, true) => (((addr_high + 1) << 8) + addr_low as u16, true),
+        (addr_low, false) => ((addr_high << 8) + addr_low as u16, false),
+    };
+
+    (addr, page_crossed)
+}
+
 pub fn lda_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let val = mem.read((pc + 1) as u16);
@@ -54,27 +66,35 @@ pub fn lda_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 }
 
 pub fn lda_abs_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let x = registers.x as u16;
+    let x = registers.x;
     let pc = registers.pc;
-    let addr_low = mem.read((pc + 1) as u16) as u16;
-    let addr_high = mem.read((pc + 2) as u16) as u16;
-    let addr = (addr_high << 8) + addr_low + x;
+    let addr_low = mem.read((pc + 1) as u16);
+    let addr_high = mem.read((pc + 2) as u16);
+
+    let (addr, page_crossed) = compose_indexed_addr(addr_high, addr_low, x);
 
     lda_assign_register_a(registers, mem.read(addr));
 
-    Cycle(4)
+    match page_crossed {
+        true => Cycle(5),
+        false => Cycle(4),
+    }
 }
 
 pub fn lda_abs_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let y = registers.y as u16;
+    let y = registers.y;
     let pc = registers.pc;
-    let addr_low = mem.read((pc + 1) as u16) as u16;
-    let addr_high = mem.read((pc + 2) as u16) as u16;
-    let addr = (addr_high << 8) + addr_low + y;
+    let addr_low = mem.read((pc + 1) as u16);
+    let addr_high = mem.read((pc + 2) as u16);
+
+    let (addr, page_crossed) = compose_indexed_addr(addr_high, addr_low, y);
 
     lda_assign_register_a(registers, mem.read(addr));
 
-    Cycle(4)
+    match page_crossed {
+        true => Cycle(5),
+        false => Cycle(4),
+    }
 }
 
 pub fn lda_indirect_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
@@ -93,18 +113,22 @@ pub fn lda_indirect_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 }
 
 pub fn lda_indirect_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let y = registers.y as u16;
+    let y = registers.y;
     let pc = registers.pc;
 
     let indirect_addr = mem.read((pc + 1) as u16) as u16;
 
-    let addr_low = mem.read(indirect_addr) as u16;
-    let addr_high = mem.read(indirect_addr + 1) as u16;
-    let addr = (addr_high << 8) + addr_low + y;
+    let addr_low = mem.read(indirect_addr);
+    let addr_high = mem.read(indirect_addr + 1);
+
+    let (addr, page_crossed) = compose_indexed_addr(addr_high, addr_low, y);
 
     lda_assign_register_a(registers, mem.read(addr));
 
-    Cycle(5)
+    match page_crossed {
+        true => Cycle(6),
+        false => Cycle(5),
+    }
 }
 
 #[cfg(test)]
@@ -145,11 +169,29 @@ mod test {
         cpu.registers.x = 0x01;
     }
 
+    fn abs_x_with_page_crossing(cpu: &mut RP2A03, val: u8) {
+        // ins $04ff, note the order.
+        cpu.memory.write(1, 0xff);
+        cpu.memory.write(2, 0x04);
+        cpu.memory.write(0x0500, val);
+
+        cpu.registers.x = 0x01;
+    }
+
     fn abs_y(cpu: &mut RP2A03, val: u8) {
         // ins $0401, note the order.
         cpu.memory.write(1, 0x01);
         cpu.memory.write(2, 0x04);
         cpu.memory.write(0x0402, val);
+
+        cpu.registers.y = 0x01;
+    }
+
+    fn abs_y_with_page_crossing(cpu: &mut RP2A03, val: u8) {
+        // ins $04ff, note the order.
+        cpu.memory.write(1, 0xff);
+        cpu.memory.write(2, 0x04);
+        cpu.memory.write(0x0500, val);
 
         cpu.registers.y = 0x01;
     }
@@ -174,10 +216,50 @@ mod test {
         cpu.registers.y = 0x01;
     }
 
-    macro_rules! lda_test (
-            ($test_name: ident,
+    fn indirect_y_with_page_crossing(cpu: &mut RP2A03, val: u8) {
+        // ins $1234, note the order.
+        cpu.memory.write(1, 0x90);
+        cpu.memory.write(0x0090, 0xff);
+        cpu.memory.write(0x0091, 0x12);
+        cpu.memory.write(0x1300, val);
+
+        cpu.registers.y = 0x01;
+    }
+
+    macro_rules! cross_boundary_cycle_count_add_one_test (
+            (test_name=$test_name: ident,
              $opcode: expr,
-             $arrange_fn: expr,
+             no_boundary_crossing_arrange_fn=$no_boundary_crossing_arrange_fn: expr,
+             boundary_crossing_arrange_fn=$boundary_crossing_arrange_fn: expr,
+             ) => {
+                #[test]
+                fn $test_name() {
+                    let Cycle(cycle_without_page_crossing) = {
+                        let mut cpu = RP2A03::new();
+                        cpu.memory.write(0, $opcode.into());
+                        $no_boundary_crossing_arrange_fn(&mut cpu, 0x42);
+
+                        cpu.execute()
+                    };
+
+                    let Cycle(cycle_with_page_crossing) = {
+                        let mut cpu = RP2A03::new();
+                        cpu.memory.write(0, $opcode.into());
+                        $boundary_crossing_arrange_fn(&mut cpu, 0x42);
+
+                        cpu.execute()
+                    };
+
+                    assert_eq!(cycle_with_page_crossing,
+                               cycle_without_page_crossing + 1);
+                }
+            }
+        );
+
+    macro_rules! lda_test (
+            (test_name=$test_name: ident,
+             $opcode: expr,
+             arrange_fn=$arrange_fn: expr,
              reg_a=$expected_reg_a: expr,
              zero_flag=$zero_flag: expr,
              sign_flag=$sign_flag: expr
@@ -203,196 +285,238 @@ mod test {
         );
 
     lda_test!(
-        lda_imm,
+        test_name = lda_imm,
         OpCode::LdaImm,
-        imm,
+        arrange_fn = imm,
         reg_a = 0x42,
         zero_flag = false,
         sign_flag = false
     );
     lda_test!(
-        lda_zero_page,
+        test_name = lda_zero_page,
         OpCode::LdaZeroPage,
-        zero_page,
+        arrange_fn = zero_page,
         reg_a = 0x42,
         zero_flag = false,
         sign_flag = false
     );
     lda_test!(
-        lda_zero_page_x,
+        test_name = lda_zero_page_x,
         OpCode::LdaZeroPageX,
-        zero_page_x,
+        arrange_fn = zero_page_x,
         reg_a = 0x42,
         zero_flag = false,
         sign_flag = false
     );
     lda_test!(
-        lda_abs,
+        test_name = lda_abs,
         OpCode::LdaAbs,
-        abs,
+        arrange_fn = abs,
         reg_a = 0x42,
         zero_flag = false,
         sign_flag = false
     );
     lda_test!(
-        lda_abs_x,
+        test_name = lda_abs_x,
         OpCode::LdaAbsX,
-        abs_x,
+        arrange_fn = abs_x,
         reg_a = 0x42,
         zero_flag = false,
         sign_flag = false
     );
     lda_test!(
-        lda_abs_y,
+        test_name = lda_abs_x_with_page_crossing,
+        OpCode::LdaAbsX,
+        arrange_fn = abs_x_with_page_crossing,
+        reg_a = 0x42,
+        zero_flag = false,
+        sign_flag = false
+    );
+    lda_test!(
+        test_name = lda_abs_y,
         OpCode::LdaAbsY,
-        abs_y,
+        arrange_fn = abs_y,
         reg_a = 0x42,
         zero_flag = false,
         sign_flag = false
     );
     lda_test!(
-        lda_indirect_x,
+        test_name = lda_abs_y_with_page_crossing,
+        OpCode::LdaAbsY,
+        arrange_fn = abs_y_with_page_crossing,
+        reg_a = 0x42,
+        zero_flag = false,
+        sign_flag = false
+    );
+    lda_test!(
+        test_name = lda_indirect_x,
         OpCode::LdaIndirectX,
-        indirect_x,
+        arrange_fn = indirect_x,
         reg_a = 0x42,
         zero_flag = false,
         sign_flag = false
     );
     lda_test!(
-        lda_indirect_y,
+        test_name = lda_indirect_y,
         OpCode::LdaIndirectY,
-        indirect_y,
+        arrange_fn = indirect_y,
         reg_a = 0x42,
         zero_flag = false,
         sign_flag = false
     );
     lda_test!(
-        lda_imm_zero,
+        test_name = lda_indirect_y_with_page_crossed,
+        OpCode::LdaIndirectY,
+        arrange_fn = indirect_y_with_page_crossing,
+        reg_a = 0x42,
+        zero_flag = false,
+        sign_flag = false
+    );
+    lda_test!(
+        test_name = lda_imm_zero,
         OpCode::LdaImm,
-        imm,
+        arrange_fn = imm,
         reg_a = 0x00,
         zero_flag = true,
         sign_flag = false
     );
     lda_test!(
-        lda_zero_zero,
+        test_name = lda_zero_zero,
         OpCode::LdaZeroPage,
-        zero_page,
+        arrange_fn = zero_page,
         reg_a = 0x00,
         zero_flag = true,
         sign_flag = false
     );
     lda_test!(
-        lda_zero_page_x_zero,
+        test_name = lda_zero_page_x_zero,
         OpCode::LdaZeroPageX,
-        zero_page_x,
+        arrange_fn = zero_page_x,
         reg_a = 0x00,
         zero_flag = true,
         sign_flag = false
     );
     lda_test!(
-        lda_abs_zero,
+        test_name = lda_abs_zero,
         OpCode::LdaAbs,
-        abs,
+        arrange_fn = abs,
         reg_a = 0x00,
         zero_flag = true,
         sign_flag = false
     );
     lda_test!(
-        lda_abs_x_zero,
+        test_name = lda_abs_x_zero,
         OpCode::LdaAbsX,
-        abs_x,
+        arrange_fn = abs_x,
         reg_a = 0x00,
         zero_flag = true,
         sign_flag = false
     );
     lda_test!(
-        lda_abs_y_zero,
+        test_name = lda_abs_y_zero,
         OpCode::LdaAbsY,
-        abs_y,
+        arrange_fn = abs_y,
         reg_a = 0x00,
         zero_flag = true,
         sign_flag = false
     );
     lda_test!(
-        lda_indirect_x_zero,
+        test_name = lda_indirect_x_zero,
         OpCode::LdaIndirectX,
-        indirect_x,
+        arrange_fn = indirect_x,
         reg_a = 0x00,
         zero_flag = true,
         sign_flag = false
     );
     lda_test!(
-        lda_indirect_y_zero,
+        test_name = lda_indirect_y_zero,
         OpCode::LdaIndirectY,
-        indirect_y,
+        arrange_fn = indirect_y,
         reg_a = 0x00,
         zero_flag = true,
         sign_flag = false
+    );
+    lda_test!(
+        test_name = lda_imm_sign,
+        OpCode::LdaImm,
+        arrange_fn = imm,
+        reg_a = 0b10000000,
+        zero_flag = false,
+        sign_flag = true
+    );
+    lda_test!(
+        test_name = lda_zero_page_sign,
+        OpCode::LdaZeroPage,
+        arrange_fn = zero_page,
+        reg_a = 0b10000000,
+        zero_flag = false,
+        sign_flag = true
+    );
+    lda_test!(
+        test_name = lda_zero_page_x_sign,
+        OpCode::LdaZeroPageX,
+        arrange_fn = zero_page_x,
+        reg_a = 0b10000000,
+        zero_flag = false,
+        sign_flag = true
+    );
+    lda_test!(
+        test_name = lda_abs_sign,
+        OpCode::LdaAbs,
+        arrange_fn = abs,
+        reg_a = 0b10000000,
+        zero_flag = false,
+        sign_flag = true
+    );
+    lda_test!(
+        test_name = lda_abs_x_sign,
+        OpCode::LdaAbsX,
+        arrange_fn = abs_x,
+        reg_a = 0b10000000,
+        zero_flag = false,
+        sign_flag = true
+    );
+    lda_test!(
+        test_name = lda_abs_y_sign,
+        OpCode::LdaAbsY,
+        arrange_fn = abs_y,
+        reg_a = 0b10000000,
+        zero_flag = false,
+        sign_flag = true
+    );
+    lda_test!(
+        test_name = lda_indirect_x_sign,
+        OpCode::LdaIndirectX,
+        arrange_fn = indirect_x,
+        reg_a = 0b10000000,
+        zero_flag = false,
+        sign_flag = true
+    );
+    lda_test!(
+        test_name = lda_indirect_y_sign,
+        OpCode::LdaIndirectY,
+        arrange_fn = indirect_y,
+        reg_a = 0b10000000,
+        zero_flag = false,
+        sign_flag = true
     );
 
-    lda_test!(
-        lda_imm_sign,
-        OpCode::LdaImm,
-        imm,
-        reg_a = 0b10000000,
-        zero_flag = false,
-        sign_flag = true
-    );
-    lda_test!(
-        lda_zero_page_sign,
-        OpCode::LdaZeroPage,
-        zero_page,
-        reg_a = 0b10000000,
-        zero_flag = false,
-        sign_flag = true
-    );
-    lda_test!(
-        lda_zero_page_x_sign,
-        OpCode::LdaZeroPageX,
-        zero_page_x,
-        reg_a = 0b10000000,
-        zero_flag = false,
-        sign_flag = true
-    );
-    lda_test!(
-        lda_abs_sign,
-        OpCode::LdaAbs,
-        abs,
-        reg_a = 0b10000000,
-        zero_flag = false,
-        sign_flag = true
-    );
-    lda_test!(
-        lda_abs_x_sign,
+    cross_boundary_cycle_count_add_one_test!(
+        test_name = lda_abs_x_cycle_count,
         OpCode::LdaAbsX,
-        abs_x,
-        reg_a = 0b10000000,
-        zero_flag = false,
-        sign_flag = true
+        no_boundary_crossing_arrange_fn = abs_x,
+        boundary_crossing_arrange_fn = abs_x_with_page_crossing,
     );
-    lda_test!(
-        lda_abs_y_sign,
+    cross_boundary_cycle_count_add_one_test!(
+        test_name = lda_abs_y_cycle_count,
         OpCode::LdaAbsY,
-        abs_y,
-        reg_a = 0b10000000,
-        zero_flag = false,
-        sign_flag = true
+        no_boundary_crossing_arrange_fn = abs_y,
+        boundary_crossing_arrange_fn = abs_y_with_page_crossing,
     );
-    lda_test!(
-        lda_indirect_x_sign,
-        OpCode::LdaIndirectX,
-        indirect_x,
-        reg_a = 0b10000000,
-        zero_flag = false,
-        sign_flag = true
-    );
-    lda_test!(
-        lda_indirect_y_sign,
+    cross_boundary_cycle_count_add_one_test!(
+        test_name = lda_indirect_y_cycle_count,
         OpCode::LdaIndirectY,
-        indirect_y,
-        reg_a = 0b10000000,
-        zero_flag = false,
-        sign_flag = true
+        no_boundary_crossing_arrange_fn = indirect_y,
+        boundary_crossing_arrange_fn = indirect_y_with_page_crossing,
     );
 }

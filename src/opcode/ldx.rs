@@ -132,6 +132,14 @@ mod test {
         sign_flag = false
     );
     ldx_test!(
+        test_name = ldx_zero_page_y,
+        OpCode::LdxZeroPageY,
+        arrange_fn = arrange_for_zero_page_y,
+        reg_x = 0x42,
+        zero_flag = false,
+        sign_flag = false
+    );
+    ldx_test!(
         test_name = ldx_abs,
         OpCode::LdxAbs,
         arrange_fn = arrange_for_abs,

@@ -1,4 +1,5 @@
 use opcode::OpCode;
+use opcode::Cycle;
 
 const MEM_ADDR_MAX: usize = 0xffff;
 
@@ -7,9 +8,42 @@ pub struct Registers {
     pub a: u8,
     pub x: u8,
     pub y: u8,
-    pub p: u8,
     pub pc: u8,
     pub sp: u8,
+    p: u8,
+}
+
+macro_rules! bit_flag_getter_setter {
+    ($setter_name: ident, $getter_name: ident, $bit_no: expr) => {
+        #[inline]
+        pub fn $setter_name(&mut self, flag: bool) {
+            if flag {
+                self.p |= 1 << $bit_no;
+            } else {
+                self.p &= !(1 << $bit_no);
+            }
+        }
+
+        #[inline]
+        pub fn $getter_name(&self) -> bool {
+            ((self.p >> $bit_no) & 1) == 1
+        }
+    }
+}
+
+impl Registers {
+    #[inline]
+    pub fn p(&self) -> u8 {
+        self.p
+    }
+
+    bit_flag_getter_setter!(set_carray_flag, carry_flag, 0);
+    bit_flag_getter_setter!(set_zero_flag, zero_flag, 1);
+    bit_flag_getter_setter!(set_interrupt_disable_flag, interrupt_disable_flag, 2);
+    bit_flag_getter_setter!(set_decimal_mode_flag, decimal_mode_flag, 3);
+    bit_flag_getter_setter!(set_break_command_flag, break_command_flag, 4);
+    bit_flag_getter_setter!(set_overflow_flag, overflow_flag, 6);
+    bit_flag_getter_setter!(set_sign_flag, sign_flag, 7);
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -32,8 +66,8 @@ impl Memory {
 }
 
 pub struct RP2A03 {
-    memory: Memory,
-    registers: Registers,
+    pub memory: Memory,
+    pub registers: Registers,
     current_cycles: u32,
 }
 
@@ -45,7 +79,7 @@ impl RP2A03 {
                 a: 0x00,
                 x: 0x00,
                 y: 0x00,
-                p: 0x00,
+                p: 0b00100000, // The unused bit should always be logical one.
                 pc: 0x00,
                 sp: 0x00,
             },
@@ -59,98 +93,9 @@ impl RP2A03 {
         let opcode = OpCode::from(self.memory.read(pc as u16));
         let opcode_fn = opcode.get_fn();
 
-        opcode_fn(&mut self.registers, &mut self.memory);
+        let Cycle(cycles_num) = opcode_fn(&mut self.registers, &mut self.memory);
 
         self.registers.pc += (1 + opcode.operands_num());
-        self.current_cycles += opcode.cycles_num() as u32;
-    }
-}
-
-#[cfg(test)]
-mod test {
-    pub use super::*;
-
-    mod opcode {
-        use super::*;
-
-        fn imm(cpu: &mut RP2A03) {
-            cpu.memory.write(1, 0x42);
-        }
-
-        fn zero_page(cpu: &mut RP2A03) {
-            cpu.memory.write(1, 0x02);
-            cpu.memory.write(2, 0x42);
-        }
-
-        fn zero_page_x(cpu: &mut RP2A03) {
-            cpu.memory.write(1, 0x00);
-            cpu.memory.write(2, 0x42);
-
-            cpu.registers.x = 0x02;
-        }
-
-        fn abs(cpu: &mut RP2A03) {
-            // ins $0102, note the order.
-            cpu.memory.write(1, 0x02);
-            cpu.memory.write(2, 0x01);
-            cpu.memory.write(0x0102, 0x42);
-        }
-
-        fn abs_x(cpu: &mut RP2A03) {
-            // ins $0401, note the order.
-            cpu.memory.write(1, 0x01);
-            cpu.memory.write(2, 0x04);
-            cpu.memory.write(0x0402, 0x42);
-
-            cpu.registers.x = 0x01;
-        }
-
-        macro_rules! assert_field_eq (
-            ($left: expr, $right: expr, [$($field: ident), *]) => {
-                $(
-                    assert_eq!($left.$field, $right.$field);
-                )*
-            }
-        );
-
-        macro_rules! lda_test (
-            ($test_name: ident, $opcode: expr, $arrange_fn: expr) => {
-                #[test]
-                fn $test_name() {
-                    let mut cpu = RP2A03::new();
-                    cpu.memory.write(0, $opcode.into());
-                    $arrange_fn(&mut cpu);
-
-                    let mem_snapshot = cpu.memory.clone();
-                    let regs_snaptshot = cpu.registers.clone();
-
-                    cpu.execute();
-
-                    assert_eq!(cpu.memory, mem_snapshot);
-                    assert_eq!(cpu.registers.a, 0x42);
-                    assert_field_eq!(cpu.registers, regs_snaptshot, [p, sp, x, y]);
-                }
-            }
-        );
-
-        lda_test!(lda_imm, OpCode::LdaImm, imm);
-        lda_test!(lda_zero_page, OpCode::LdaZeroPage, zero_page);
-        lda_test!(lda_zero_page_x, OpCode::LdaZeroPageX, zero_page_x);
-        lda_test!(lda_abs, OpCode::LdaAbs, abs);
-        lda_test!(lda_abs_x, OpCode::LdaAbsX, abs_x);
-
-        #[test]
-        fn nop() {
-            let mut cpu = RP2A03::new();
-            cpu.memory.write(0, OpCode::Nop.into());
-
-            let mem_snapshot = cpu.memory.clone();
-            let regs_snaptshot = cpu.registers.clone();
-
-            cpu.execute();
-
-            assert_eq!(cpu.memory, mem_snapshot);
-            assert_field_eq!(cpu.registers, regs_snaptshot, [a, p, sp, x, y]);
-        }
+        self.current_cycles += cycles_num;
     }
 }

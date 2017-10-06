@@ -15,12 +15,19 @@ fn lda_assign_register_a(registers: &mut Registers, val: u8) {
 }
 
 #[inline]
-fn compose_indexed_addr(addr_high: u8, addr_low: u8, index: u8) -> (u16, bool) {
-    let addr_high = addr_high as u16;
+fn compose_addr(addr_high: u8, addr_low: u8) -> u16 {
+    ((addr_high as u16) << 8) + addr_low as u16
+}
 
+#[inline]
+fn compose_indexed_addr(addr_high: u8, addr_low: u8, index: u8) -> (u16, bool) {
     let (addr, page_crossed) = match addr_low.overflowing_add(index) {
-        (addr_low, true) => (((addr_high + 1) << 8) + addr_low as u16, true),
-        (addr_low, false) => ((addr_high << 8) + addr_low as u16, false),
+        (addr_low, true) => {
+            let (addr_high, _overflowed) = addr_high.overflowing_add(1);
+
+            (compose_addr(addr_high, addr_low), true)
+        }
+        (addr_low, false) => (compose_addr(addr_high, addr_low), false),
     };
 
     (addr, page_crossed)
@@ -56,9 +63,9 @@ pub fn lda_zero_page_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 
 pub fn lda_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
-    let addr_low = mem.read((pc + 1) as u16) as u16;
-    let addr_high = mem.read((pc + 2) as u16) as u16;
-    let addr = (addr_high << 8) + addr_low;
+    let addr_low = mem.read((pc + 1) as u16);
+    let addr_high = mem.read((pc + 2) as u16);
+    let addr = compose_addr(addr_high, addr_low);
 
     lda_assign_register_a(registers, mem.read(addr));
 
@@ -103,9 +110,9 @@ pub fn lda_indirect_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 
     let indirect_addr = mem.read((pc + 1) as u16) as u16 + x;
 
-    let addr_low = mem.read(indirect_addr) as u16;
-    let addr_high = mem.read(indirect_addr + 1) as u16;
-    let addr = (addr_high << 8) + addr_low;
+    let addr_low = mem.read(indirect_addr);
+    let addr_high = mem.read(indirect_addr + 1);
+    let addr = compose_addr(addr_high, addr_low);
 
     lda_assign_register_a(registers, mem.read(addr));
 

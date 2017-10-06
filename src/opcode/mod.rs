@@ -2,6 +2,7 @@
 mod utils;
 
 mod lda;
+mod ldx;
 mod nop;
 
 use std::convert::From;
@@ -10,6 +11,7 @@ use cpu::Registers;
 use cpu::Memory;
 
 use self::lda::*;
+use self::ldx::*;
 use self::nop::*;
 
 pub struct Cycle(pub u32);
@@ -79,6 +81,12 @@ opcodes!(
     (LdaAbsY, 0xB9, 2, lda_abs_y),
     (LdaIndirectX, 0xA1, 1, lda_indirect_x),
     (LdaIndirectY, 0xB1, 1, lda_indirect_y),
+
+    (LdxImm, 0xA2, 1, ldx_imm),
+    (LdxZeroPage, 0xA6, 1, ldx_zero_page),
+    (LdxZeroPageY, 0xB6, 1, ldx_zero_page_y),
+    (LdxAbs, 0xAE, 2, ldx_abs),
+    (LdxAbsY, 0xBE, 2, ldx_abs_y),
 
     (Nop, 0xEA, 0, nop)
 );

@@ -1,6 +1,7 @@
 #[macro_use]
 mod utils;
 
+mod adc;
 mod lda;
 mod ldx;
 mod ldy;
@@ -11,6 +12,7 @@ use std::convert::From;
 use cpu::Registers;
 use cpu::Memory;
 
+use self::adc::*;
 use self::lda::*;
 use self::ldx::*;
 use self::ldy::*;
@@ -75,6 +77,15 @@ macro_rules! opcodes {
 }
 
 opcodes!(
+    (AdcImm, 0x69, 1, adc_imm),
+    (AdcZeroPage, 0x65, 1, adc_zero_page),
+    (AdcZeroPageX, 0x75, 1, adc_zero_page_x),
+    (AdcAbs, 0x6D, 2, adc_abs),
+    (AdcAbsX, 0x7D, 2, adc_abs_x),
+    (AdcAbsY, 0x79, 2, adc_abs_y),
+    (AdcIndirectX, 0x61, 1, adc_indirect_x),
+    (AdcIndirectY, 0x71, 1, adc_indirect_y),
+
     (LdaImm, 0xA9, 1, lda_imm),
     (LdaZeroPage, 0xA5, 1, lda_zero_page),
     (LdaZeroPageX, 0xB5, 1, lda_zero_page_x),

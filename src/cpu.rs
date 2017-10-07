@@ -13,6 +13,19 @@ pub struct Registers {
     p: u8,
 }
 
+impl Registers {
+    pub fn new() -> Registers {
+        Registers {
+            a: 0x00,
+            x: 0x00,
+            y: 0x00,
+            p: 0b00100000, // The unused bit should always be logical one.
+            pc: 0x00,
+            sp: 0x00,
+        }
+    }
+}
+
 macro_rules! bit_flag_getter_setter {
     ($setter_name: ident, $getter_name: ident, $bit_no: expr) => {
         #[inline]
@@ -75,14 +88,7 @@ impl RP2A03 {
     pub fn new() -> RP2A03 {
         RP2A03 {
             memory: Memory::new(),
-            registers: Registers {
-                a: 0x00,
-                x: 0x00,
-                y: 0x00,
-                p: 0b00100000, // The unused bit should always be logical one.
-                pc: 0x00,
-                sp: 0x00,
-            },
+            registers: Registers::new(),
             current_cycles: 0,
         }
     }

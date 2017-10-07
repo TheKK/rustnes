@@ -10,6 +10,9 @@ mod lda;
 mod ldx;
 mod ldy;
 mod nop;
+mod sec;
+mod sed;
+mod sei;
 
 use std::convert::From;
 
@@ -25,6 +28,9 @@ use self::lda::*;
 use self::ldx::*;
 use self::ldy::*;
 use self::nop::*;
+use self::sec::*;
+use self::sed::*;
+use self::sei::*;
 
 pub struct Cycle(pub u32);
 
@@ -123,5 +129,11 @@ opcodes!(
     (LdyAbs, 0xAC, 2, ldy_abs),
     (LdyAbsX, 0xBC, 2, ldy_abs_x),
 
-    (Nop, 0xEA, 0, nop)
+    (Nop, 0xEA, 0, nop),
+
+    (Sec, 0x38, 0, sec_implied),
+
+    (Sed, 0xF8, 0, sed_implied),
+
+    (Sei, 0x78, 0, sei_implied)
 );

@@ -1,8 +1,7 @@
 use super::Cycle;
 use super::OpCode;
 
-use opcode::utils::compose_addr;
-use opcode::utils::compose_indexed_addr;
+use opcode::utils::mem;
 
 use cpu::Registers;
 use cpu::Memory;
@@ -19,7 +18,7 @@ fn ldy_assign_register_y(registers: &mut Registers, val: u8) {
 
 pub fn ldy_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
-    let val = mem.read((pc + 1) as u16);
+    let val = mem::read_imm(&mem, pc);
 
     ldy_assign_register_y(registers, val);
 
@@ -28,9 +27,9 @@ pub fn ldy_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 
 pub fn ldy_zero_page(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
-    let addr = mem.read((pc + 1) as u16) as u16;
+    let val = mem::read_zero_page(&mem, pc);
 
-    ldy_assign_register_y(registers, mem.read(addr));
+    ldy_assign_register_y(registers, val);
 
     Cycle(3)
 }
@@ -38,20 +37,18 @@ pub fn ldy_zero_page(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 pub fn ldy_zero_page_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let x = registers.x;
-    let addr = (mem.read((pc + 1) as u16) + x) as u16;
+    let val = mem::read_zero_page_indexed(&mem, pc, x);
 
-    ldy_assign_register_y(registers, mem.read(addr));
+    ldy_assign_register_y(registers, val);
 
     Cycle(4)
 }
 
 pub fn ldy_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
-    let addr_low = mem.read((pc + 1) as u16);
-    let addr_high = mem.read((pc + 2) as u16);
-    let addr = compose_addr(addr_high, addr_low);
+    let val = mem::read_abs(&mem, pc);
 
-    ldy_assign_register_y(registers, mem.read(addr));
+    ldy_assign_register_y(registers, val);
 
     Cycle(4)
 }
@@ -59,12 +56,9 @@ pub fn ldy_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 pub fn ldy_abs_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let x = registers.x;
     let pc = registers.pc;
-    let addr_low = mem.read((pc + 1) as u16);
-    let addr_high = mem.read((pc + 2) as u16);
+    let (val, page_crossed) = mem::read_abs_indexed(&mem, pc, x);
 
-    let (addr, page_crossed) = compose_indexed_addr(addr_high, addr_low, x);
-
-    ldy_assign_register_y(registers, mem.read(addr));
+    ldy_assign_register_y(registers, val);
 
     match page_crossed {
         true => Cycle(5),

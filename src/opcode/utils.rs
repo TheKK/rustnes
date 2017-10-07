@@ -44,23 +44,93 @@ macro_rules! cross_boundary_cycle_count_add_one_test (
     }
 );
 
-#[inline]
-pub fn compose_addr(addr_high: u8, addr_low: u8) -> u16 {
-    ((addr_high as u16) << 8) + addr_low as u16
-}
+pub mod mem {
+    use cpu::Memory;
 
-#[inline]
-pub fn compose_indexed_addr(addr_high: u8, addr_low: u8, index: u8) -> (u16, bool) {
-    let (addr, page_crossed) = match addr_low.overflowing_add(index) {
-        (addr_low, true) => {
-            let (addr_high, _overflowed) = addr_high.overflowing_add(1);
+    #[inline]
+    fn compose_addr(addr_high: u8, addr_low: u8) -> u16 {
+        ((addr_high as u16) << 8) + addr_low as u16
+    }
 
-            (compose_addr(addr_high, addr_low), true)
-        }
-        (addr_low, false) => (compose_addr(addr_high, addr_low), false),
-    };
+    #[inline]
+    fn compose_indexed_addr(addr_high: u8, addr_low: u8, index: u8) -> (u16, bool) {
+        let (addr, page_crossed) = match addr_low.overflowing_add(index) {
+            (addr_low, true) => {
+                let (addr_high, _overflowed) = addr_high.overflowing_add(1);
 
-    (addr, page_crossed)
+                (compose_addr(addr_high, addr_low), true)
+            }
+            (addr_low, false) => (compose_addr(addr_high, addr_low), false),
+        };
+
+        (addr, page_crossed)
+    }
+
+    #[inline]
+    pub fn read_imm(mem: &Memory, pc: u8) -> u8 {
+        mem.read((pc + 1) as u16)
+    }
+
+    #[inline]
+    pub fn read_zero_page(mem: &Memory, pc: u8) -> u8 {
+        let addr = mem.read((pc + 1) as u16);
+
+        mem.read(addr as u16)
+    }
+
+    #[inline]
+    pub fn read_zero_page_indexed(mem: &Memory, pc: u8, index: u8) -> u8 {
+        let base_addr = mem.read((pc + 1) as u16);
+        let indexed_addr = (base_addr + index) as u16;
+
+        mem.read(indexed_addr)
+    }
+
+    #[inline]
+    pub fn read_abs(mem: &Memory, pc: u8) -> u8 {
+        let addr_low = mem.read((pc + 1) as u16);
+        let addr_high = mem.read((pc + 2) as u16);
+        let addr = compose_addr(addr_high, addr_low);
+
+        mem.read(addr)
+    }
+
+    #[inline]
+    pub fn read_abs_indexed(mem: &Memory, pc: u8, index: u8) -> (u8, bool) {
+        let addr_low = mem.read((pc + 1) as u16);
+        let addr_high = mem.read((pc + 2) as u16);
+
+        let (addr, page_crossed) = compose_indexed_addr(addr_high, addr_low, index);
+
+        (mem.read(addr), page_crossed)
+    }
+
+    #[inline]
+    pub fn read_indirect_x(mem: &Memory, pc: u8, x: u8) -> u8 {
+        let indirect_addr = mem.read((pc + 1) as u16) + x;
+
+        // TODO Figure out how this hardware handle one byte address overflowing.
+        let indirect_addr = indirect_addr as u16;
+
+        let addr_low = mem.read(indirect_addr);
+        let addr_high = mem.read(indirect_addr + 1);
+        let addr = compose_addr(addr_high, addr_low);
+
+        mem.read(addr)
+    }
+
+
+    #[inline]
+    pub fn read_indirect_y(mem: &Memory, pc: u8, y: u8) -> (u8, bool) {
+        let indirect_addr = mem.read((pc + 1) as u16) as u16;
+
+        let addr_low = mem.read(indirect_addr);
+        let addr_high = mem.read(indirect_addr + 1);
+
+        let (addr, page_crossed) = compose_indexed_addr(addr_high, addr_low, y);
+
+        (mem.read(addr), page_crossed)
+    }
 }
 
 #[cfg(test)]

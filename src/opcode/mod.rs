@@ -3,6 +3,7 @@ mod utils;
 
 mod adc;
 mod clc;
+mod clv;
 mod lda;
 mod ldx;
 mod ldy;
@@ -15,6 +16,7 @@ use cpu::Memory;
 
 use self::adc::*;
 use self::clc::*;
+use self::clv::*;
 use self::lda::*;
 use self::ldx::*;
 use self::ldy::*;
@@ -89,6 +91,8 @@ opcodes!(
     (AdcIndirectY, 0x71, 1, adc_indirect_y),
 
     (Clc, 0x00, 0, clc_implied),
+
+    (Clv, 0xB8, 0, clv_implied),
 
     (LdaImm, 0xA9, 1, lda_imm),
     (LdaZeroPage, 0xA5, 1, lda_zero_page),

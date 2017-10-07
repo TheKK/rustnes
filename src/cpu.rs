@@ -50,7 +50,7 @@ impl Registers {
         self.p
     }
 
-    bit_flag_getter_setter!(set_carray_flag, carry_flag, 0);
+    bit_flag_getter_setter!(set_carry_flag, carry_flag, 0);
     bit_flag_getter_setter!(set_zero_flag, zero_flag, 1);
     bit_flag_getter_setter!(set_interrupt_disable_flag, interrupt_disable_flag, 2);
     bit_flag_getter_setter!(set_decimal_mode_flag, decimal_mode_flag, 3);

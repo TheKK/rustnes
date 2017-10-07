@@ -5,7 +5,7 @@ use cpu::Memory;
 
 #[inline]
 fn clc(registers: &mut Registers) {
-    registers.set_carray_flag(false);
+    registers.set_carry_flag(false);
 }
 
 pub fn clc_implied(registers: &mut Registers, _: &mut Memory) -> Cycle {
@@ -23,7 +23,7 @@ mod test {
     #[test]
     fn clc_when_carry_flag_is_set() {
         let mut registers = Registers::new();
-        registers.set_carray_flag(true);
+        registers.set_carry_flag(true);
 
         let expected_registers = Registers::new();
 

@@ -19,7 +19,7 @@ fn adc(registers: &mut Registers, val: u8) {
     registers.set_zero_flag(zero_flag);
     registers.set_sign_flag(sign_flag);
     registers.set_overflow_flag(overflow_flag);
-    registers.set_carray_flag(carry_flag);
+    registers.set_carry_flag(carry_flag);
 
     registers.a = temp as u8;
 }
@@ -132,7 +132,7 @@ mod test {
 
             reg.a = 0x00;
             reg.set_zero_flag(true);
-            reg.set_carray_flag(true);
+            reg.set_carry_flag(true);
 
             reg
         };
@@ -152,7 +152,7 @@ mod test {
 
             reg.a = 0x0;
             reg.set_zero_flag(true);
-            reg.set_carray_flag(true);
+            reg.set_carry_flag(true);
             reg.set_overflow_flag(true);
 
             reg
@@ -173,7 +173,7 @@ mod test {
 
             reg.a = 0x00;
             reg.set_zero_flag(true);
-            reg.set_carray_flag(true);
+            reg.set_carry_flag(true);
 
             reg
         };

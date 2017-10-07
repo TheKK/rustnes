@@ -2,6 +2,7 @@
 mod utils;
 
 mod adc;
+mod clc;
 mod lda;
 mod ldx;
 mod ldy;
@@ -13,6 +14,7 @@ use cpu::Registers;
 use cpu::Memory;
 
 use self::adc::*;
+use self::clc::*;
 use self::lda::*;
 use self::ldx::*;
 use self::ldy::*;
@@ -85,6 +87,8 @@ opcodes!(
     (AdcAbsY, 0x79, 2, adc_abs_y),
     (AdcIndirectX, 0x61, 1, adc_indirect_x),
     (AdcIndirectY, 0x71, 1, adc_indirect_y),
+
+    (Clc, 0x00, 0, clc_implied),
 
     (LdaImm, 0xA9, 1, lda_imm),
     (LdaZeroPage, 0xA5, 1, lda_zero_page),

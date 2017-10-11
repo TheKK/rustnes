@@ -73,7 +73,7 @@ macro_rules! opcodes {
                     $(
                         $opcode_hex => OpCode::$opcode,
                     )*
-                    _ => unimplemented!(),
+                    _ => unreachable!(),
                 }
             }
         }

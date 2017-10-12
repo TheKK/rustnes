@@ -145,6 +145,59 @@ mod test {
             }
         );
 
+    #[test]
+    fn lda_should_work() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0x42;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.a = expected_val;
+
+            reg_clone
+        };
+
+        lda(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
+    #[test]
+    fn lda_with_zero_value() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0x00;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.a = expected_val;
+            reg_clone.set_zero_flag(true);
+
+            reg_clone
+        };
+
+        lda(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
+    #[test]
+    fn lda_with_sign_value() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0b10000000;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.a = expected_val;
+            reg_clone.set_sign_flag(true);
+
+            reg_clone
+        };
+
+        lda(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
     lda_test!(
         test_name = lda_imm,
         OpCode::LdaImm,

@@ -107,6 +107,59 @@ mod test {
             }
         );
 
+    #[test]
+    fn ldx_should_work() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0x42;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.x = expected_val;
+
+            reg_clone
+        };
+
+        ldx(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
+    #[test]
+    fn ldx_with_zero_value() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0x00;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.x = expected_val;
+            reg_clone.set_zero_flag(true);
+
+            reg_clone
+        };
+
+        ldx(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
+    #[test]
+    fn ldx_with_sign_value() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0b10000000;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.x = expected_val;
+            reg_clone.set_sign_flag(true);
+
+            reg_clone
+        };
+
+        ldx(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
     ldx_test!(
         test_name = ldx_imm,
         OpCode::LdxImm,
@@ -172,7 +225,7 @@ mod test {
         sign_flag = false
     );
     ldx_test!(
-        test_name = lda_zero_page_y_zero,
+        test_name = ldx_zero_page_y_zero,
         OpCode::LdxZeroPageY,
         arrange_fn = arrange_for_zero_page_y,
         reg_x = 0x00,

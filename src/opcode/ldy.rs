@@ -107,6 +107,59 @@ mod test {
             }
         );
 
+    #[test]
+    fn ldy_should_work() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0x42;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.y = expected_val;
+
+            reg_clone
+        };
+
+        ldy(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
+    #[test]
+    fn ldy_with_zero_value() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0x00;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.y = expected_val;
+            reg_clone.set_zero_flag(true);
+
+            reg_clone
+        };
+
+        ldy(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
+    #[test]
+    fn ldy_with_sign_value() {
+        let mut actual_registers = Registers::new();
+
+        let expected_val = 0b10000000;
+        let expected_registers = {
+            let mut reg_clone = actual_registers.clone();
+            reg_clone.y = expected_val;
+            reg_clone.set_sign_flag(true);
+
+            reg_clone
+        };
+
+        ldy(&mut actual_registers, expected_val);
+
+        assert_eq!(actual_registers, expected_registers)
+    }
+
     ldy_test!(
         test_name = ldy_imm,
         OpCode::LdyImm,
@@ -172,7 +225,7 @@ mod test {
         sign_flag = false
     );
     ldy_test!(
-        test_name = lda_zero_page_x_zero,
+        test_name = ldy_zero_page_x_zero,
         OpCode::LdyZeroPageX,
         arrange_fn = arrange_for_zero_page_x,
         reg_y = 0x00,

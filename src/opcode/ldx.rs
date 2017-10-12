@@ -7,7 +7,7 @@ use cpu::Registers;
 use cpu::Memory;
 
 #[inline]
-fn ldx_assign_register_x(registers: &mut Registers, val: u8) {
+fn ldx(registers: &mut Registers, val: u8) {
     set_flag!(zero -> (registers, val));
     set_flag!(sign -> (registers, val));
 
@@ -18,7 +18,7 @@ pub fn ldx_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let val = mem::read_imm(&mem, pc);
 
-    ldx_assign_register_x(registers, val);
+    ldx(registers, val);
 
     Cycle(2)
 }
@@ -27,7 +27,7 @@ pub fn ldx_zero_page(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let val = mem::read_zero_page(&mem, pc);
 
-    ldx_assign_register_x(registers, val);
+    ldx(registers, val);
 
     Cycle(3)
 }
@@ -37,7 +37,7 @@ pub fn ldx_zero_page_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let y = registers.y;
     let val = mem::read_zero_page_indexed(&mem, pc, y);
 
-    ldx_assign_register_x(registers, val);
+    ldx(registers, val);
 
     Cycle(4)
 }
@@ -46,7 +46,7 @@ pub fn ldx_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let val = mem::read_abs(&mem, pc);
 
-    ldx_assign_register_x(registers, val);
+    ldx(registers, val);
 
     Cycle(4)
 }
@@ -56,7 +56,7 @@ pub fn ldx_abs_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let (val, page_crossed) = mem::read_abs_indexed(&mem, pc, y);
 
-    ldx_assign_register_x(registers, val);
+    ldx(registers, val);
 
     match page_crossed {
         true => Cycle(5),

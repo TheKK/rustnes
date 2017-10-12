@@ -6,7 +6,7 @@ use cpu::Registers;
 use cpu::Memory;
 
 #[inline]
-fn lda_assign_register_a(registers: &mut Registers, val: u8) {
+fn lda(registers: &mut Registers, val: u8) {
     set_flag!(zero -> (registers, val));
     set_flag!(sign -> (registers, val));
 
@@ -17,7 +17,7 @@ pub fn lda_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let val = mem::read_imm(&mem, pc);
 
-    lda_assign_register_a(registers, val);
+    lda(registers, val);
 
     Cycle(2)
 }
@@ -26,7 +26,7 @@ pub fn lda_zero_page(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let val = mem::read_zero_page(&mem, pc);
 
-    lda_assign_register_a(registers, val);
+    lda(registers, val);
 
     Cycle(3)
 }
@@ -36,7 +36,7 @@ pub fn lda_zero_page_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let x = registers.x;
     let val = mem::read_zero_page_indexed(&mem, pc, x);
 
-    lda_assign_register_a(registers, val);
+    lda(registers, val);
 
     Cycle(4)
 }
@@ -45,7 +45,7 @@ pub fn lda_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let val = mem::read_abs(&mem, pc);
 
-    lda_assign_register_a(registers, val);
+    lda(registers, val);
 
     Cycle(4)
 }
@@ -56,7 +56,7 @@ pub fn lda_abs_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 
     let (val, page_crossed) = mem::read_abs_indexed(&mem, pc, x);
 
-    lda_assign_register_a(registers, val);
+    lda(registers, val);
 
     match page_crossed {
         true => Cycle(5),
@@ -69,7 +69,7 @@ pub fn lda_abs_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
     let pc = registers.pc;
     let (val, page_crossed) = mem::read_abs_indexed(&mem, pc, y);
 
-    lda_assign_register_a(registers, val);
+    lda(registers, val);
 
     match page_crossed {
         true => Cycle(5),
@@ -83,7 +83,7 @@ pub fn lda_indirect_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 
     let val = mem::read_indirect_x(&mem, pc, x);
 
-    lda_assign_register_a(registers, val);
+    lda(registers, val);
 
     Cycle(6)
 }
@@ -94,7 +94,7 @@ pub fn lda_indirect_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
 
     let (val, page_crossed) = mem::read_indirect_y(&mem, pc, y);
 
-    lda_assign_register_a(registers, val);
+    lda(registers, val);
 
     match page_crossed {
         true => Cycle(6),

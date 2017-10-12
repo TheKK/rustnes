@@ -13,94 +13,17 @@ fn lda(registers: &mut Registers, val: u8) {
     registers.a = val;
 }
 
-pub fn lda_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let val = mem::read_imm(&mem, pc);
-
-    lda(registers, val);
-
-    Cycle(2)
-}
-
-pub fn lda_zero_page(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let val = mem::read_zero_page(&mem, pc);
-
-    lda(registers, val);
-
-    Cycle(3)
-}
-
-pub fn lda_zero_page_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let x = registers.x;
-    let val = mem::read_zero_page_indexed(&mem, pc, x);
-
-    lda(registers, val);
-
-    Cycle(4)
-}
-
-pub fn lda_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let val = mem::read_abs(&mem, pc);
-
-    lda(registers, val);
-
-    Cycle(4)
-}
-
-pub fn lda_abs_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let x = registers.x;
-    let pc = registers.pc;
-
-    let (val, page_crossed) = mem::read_abs_indexed(&mem, pc, x);
-
-    lda(registers, val);
-
-    match page_crossed {
-        true => Cycle(5),
-        false => Cycle(4),
-    }
-}
-
-pub fn lda_abs_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let y = registers.y;
-    let pc = registers.pc;
-    let (val, page_crossed) = mem::read_abs_indexed(&mem, pc, y);
-
-    lda(registers, val);
-
-    match page_crossed {
-        true => Cycle(5),
-        false => Cycle(4),
-    }
-}
-
-pub fn lda_indirect_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let x = registers.x;
-    let pc = registers.pc;
-
-    let val = mem::read_indirect_x(&mem, pc, x);
-
-    lda(registers, val);
-
-    Cycle(6)
-}
-
-pub fn lda_indirect_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let y = registers.y;
-    let pc = registers.pc;
-
-    let (val, page_crossed) = mem::read_indirect_y(&mem, pc, y);
-
-    lda(registers, val);
-
-    match page_crossed {
-        true => Cycle(6),
-        false => Cycle(5),
-    }
-}
+opcode_fn_with_mode!(imm -> (lda_imm, lda, Cycle(2)));
+opcode_fn_with_mode!(zero_page -> (lda_zero_page, lda, Cycle(3)));
+opcode_fn_with_mode!(zero_page_x -> (lda_zero_page_x, lda, Cycle(4)));
+opcode_fn_with_mode!(abs -> (lda_abs, lda, Cycle(4)));
+opcode_fn_with_mode!(abs_x -> (lda_abs_x, lda,
+                               page_crossed Cycle(5), or_else Cycle(4)));
+opcode_fn_with_mode!(abs_y -> (lda_abs_y, lda,
+                               page_crossed Cycle(5), or_else Cycle(4)));
+opcode_fn_with_mode!(indirect_x -> (lda_indirect_x, lda, Cycle(6)));
+opcode_fn_with_mode!(indirect_y -> (lda_indirect_y, lda,
+                                    page_crossed Cycle(6), or_else Cycle(5)));
 
 #[cfg(test)]
 mod test {

@@ -14,55 +14,12 @@ fn ldy(registers: &mut Registers, val: u8) {
     registers.y = val;
 }
 
-pub fn ldy_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let val = mem::read_imm(&mem, pc);
-
-    ldy(registers, val);
-
-    Cycle(2)
-}
-
-pub fn ldy_zero_page(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let val = mem::read_zero_page(&mem, pc);
-
-    ldy(registers, val);
-
-    Cycle(3)
-}
-
-pub fn ldy_zero_page_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let x = registers.x;
-    let val = mem::read_zero_page_indexed(&mem, pc, x);
-
-    ldy(registers, val);
-
-    Cycle(4)
-}
-
-pub fn ldy_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let val = mem::read_abs(&mem, pc);
-
-    ldy(registers, val);
-
-    Cycle(4)
-}
-
-pub fn ldy_abs_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let x = registers.x;
-    let pc = registers.pc;
-    let (val, page_crossed) = mem::read_abs_indexed(&mem, pc, x);
-
-    ldy(registers, val);
-
-    match page_crossed {
-        true => Cycle(5),
-        false => Cycle(4),
-    }
-}
+opcode_fn_with_mode!(imm -> (ldy_imm, ldy, Cycle(2)));
+opcode_fn_with_mode!(zero_page -> (ldy_zero_page, ldy, Cycle(3)));
+opcode_fn_with_mode!(zero_page_x -> (ldy_zero_page_x, ldy, Cycle(4)));
+opcode_fn_with_mode!(abs -> (ldy_abs, ldy, Cycle(4)));
+opcode_fn_with_mode!(abs_x -> (ldy_abs_x, ldy,
+                               page_crossed Cycle(5), or_else Cycle(4)));
 
 #[cfg(test)]
 mod test {

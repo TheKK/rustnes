@@ -66,6 +66,130 @@ macro_rules! set_flag(
     };
 );
 
+#[macro_export]
+macro_rules! opcode_fn_with_mode(
+    (imm -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let val = $crate::opcode::utils::mem::read_imm(&mem, pc);
+
+            $instruction(registers, val);
+
+            $cycles_num
+        }
+    };
+
+    (zero_page -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let val = $crate::opcode::utils::mem::read_zero_page(&mem, pc);
+
+            $instruction(registers, val);
+
+            $cycles_num
+        }
+    };
+
+    (zero_page_x -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let x = registers.x;
+            let val = $crate::opcode::utils::mem::read_zero_page_indexed(&mem, pc, x);
+
+            $instruction(registers, val);
+
+            $cycles_num
+        }
+    };
+
+    (zero_page_y -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let y = registers.y;
+            let val = $crate::opcode::utils::mem::read_zero_page_indexed(&mem, pc, y);
+
+            $instruction(registers, val);
+
+            $cycles_num
+        }
+    };
+
+    (abs -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let val = $crate::opcode::utils::mem::read_abs(&mem, pc);
+
+            $instruction(registers, val);
+
+            $cycles_num
+        }
+    };
+
+    (abs_x -> ($fn_name: ident, $instruction: expr,
+               page_crossed $page_crossed_cycles_num: expr,
+               or_else $normal_cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let x = registers.x;
+            let (val, page_crossed) = $crate::opcode::utils::mem::read_abs_indexed(&mem, pc, x);
+
+            $instruction(registers, val);
+
+            match page_crossed {
+                true => $page_crossed_cycles_num,
+                false => $normal_cycles_num,
+            }
+        }
+    };
+
+    (abs_y -> ($fn_name: ident, $instruction: expr,
+               page_crossed $page_crossed_cycles_num: expr,
+               or_else $normal_cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let y = registers.y;
+            let (val, page_crossed) = $crate::opcode::utils::mem::read_abs_indexed(&mem, pc, y);
+
+            $instruction(registers, val);
+
+            match page_crossed {
+                true => $page_crossed_cycles_num,
+                false => $normal_cycles_num,
+            }
+        }
+    };
+
+    (indirect_x -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let x = registers.x;
+            let val = $crate::opcode::utils::mem::read_indirect_x(&mem, pc, x);
+
+            $instruction(registers, val);
+
+            $cycles_num
+        }
+    };
+
+    (indirect_y -> ($fn_name: ident, $instruction: expr,
+                    page_crossed $page_crossed_cycles_num: expr,
+                    or_else $normal_cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let pc = registers.pc;
+            let y = registers.y;
+            let (val, page_crossed) = $crate::opcode::utils::mem::read_indirect_y(&mem, pc, y);
+
+            $instruction(registers, val);
+
+            match page_crossed {
+                true => $page_crossed_cycles_num,
+                false => $normal_cycles_num,
+            }
+            // $cycles_num_fn(page_crossed)
+        }
+    };
+);
+
 pub mod mem {
     use cpu::Memory;
 
@@ -157,7 +281,11 @@ pub mod mem {
 
 #[cfg(test)]
 pub mod test {
+    use opcode::Cycle;
+
+    use cpu::Memory;
     use cpu::RP2A03;
+    use cpu::Registers;
 
     pub fn arrange_for_imm(cpu: &mut RP2A03, val: u8) {
         cpu.memory.write(1, val);
@@ -253,5 +381,165 @@ pub mod test {
         cpu.memory.write(0x1300, val);
 
         cpu.registers.y = 0x01;
+    }
+
+    fn dumb_lda(registers: &mut Registers, val: u8) {
+        registers.a = val;
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_imm() {
+        opcode_fn_with_mode!(imm -> (target_fn, dumb_lda, Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_imm(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_zero_page() {
+        opcode_fn_with_mode!(zero_page -> (target_fn, dumb_lda, Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_zero_page(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_zero_page_x() {
+        opcode_fn_with_mode!(zero_page_x -> (target_fn, dumb_lda, Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_zero_page_x(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_zero_page_y() {
+        opcode_fn_with_mode!(zero_page_y -> (target_fn, dumb_lda, Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_zero_page_y(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_abs() {
+        opcode_fn_with_mode!(abs -> (target_fn, dumb_lda, Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_abs(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_abs_x() {
+        opcode_fn_with_mode!(abs_x -> (target_fn, dumb_lda,
+                                       page_crossed Cycle(0), or_else Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_abs_x(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_abs_y() {
+        opcode_fn_with_mode!(abs_y -> (target_fn, dumb_lda,
+                                       page_crossed Cycle(0), or_else Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_abs_y(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_indirect_x() {
+        opcode_fn_with_mode!(indirect_x -> (target_fn, dumb_lda, Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_indirect_x(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_indirect_y() {
+        opcode_fn_with_mode!(indirect_y -> (target_fn, dumb_lda,
+                                            page_crossed Cycle(0), or_else Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_indirect_y(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
     }
 }

@@ -19,79 +19,17 @@ fn adc(registers: &mut Registers, val: u8) {
     registers.a = temp as u8;
 }
 
-pub fn adc_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let pc = registers.pc;
-    let val = mem::read_imm(&mem, pc);
-
-    adc(registers, val);
-
-    Cycle(2)
-}
-
-pub fn adc_zero_page(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let val = mem::read_zero_page(&mem, registers.pc);
-
-    adc(registers, val);
-
-    Cycle(3)
-}
-
-pub fn adc_zero_page_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let val = mem::read_zero_page_indexed(&mem, registers.pc, registers.x);
-
-    adc(registers, val);
-
-    Cycle(4)
-}
-
-pub fn adc_abs(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let val = mem::read_abs(&mem, registers.pc);
-
-    adc(registers, val);
-
-    Cycle(4)
-}
-
-pub fn adc_abs_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let (val, page_crossed) = mem::read_abs_indexed(&mem, registers.pc, registers.x);
-
-    adc(registers, val);
-
-    match page_crossed {
-        true => Cycle(5),
-        false => Cycle(4),
-    }
-}
-
-pub fn adc_abs_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let (val, page_crossed) = mem::read_abs_indexed(&mem, registers.pc, registers.y);
-
-    adc(registers, val);
-
-    match page_crossed {
-        true => Cycle(5),
-        false => Cycle(4),
-    }
-}
-
-pub fn adc_indirect_x(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let val = mem::read_indirect_x(&mem, registers.pc, registers.x);
-
-    adc(registers, val);
-
-    Cycle(6)
-}
-
-pub fn adc_indirect_y(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-    let (val, page_crossed) = mem::read_indirect_y(&mem, registers.pc, registers.y);
-
-    adc(registers, val);
-
-    match page_crossed {
-        true => Cycle(6),
-        false => Cycle(5),
-    }
-}
+opcode_fn_with_mode!(imm -> (adc_imm, adc, Cycle(2)));
+opcode_fn_with_mode!(zero_page -> (adc_zero_page, adc, Cycle(3)));
+opcode_fn_with_mode!(zero_page_x -> (adc_zero_page_x, adc, Cycle(4)));
+opcode_fn_with_mode!(abs -> (adc_abs, adc, Cycle(4)));
+opcode_fn_with_mode!(abs_x -> (adc_abs_x, adc,
+                               page_crossed Cycle(5), or_else Cycle(4)));
+opcode_fn_with_mode!(abs_y -> (adc_abs_y, adc,
+                               page_crossed Cycle(5), or_else Cycle(4)));
+opcode_fn_with_mode!(indirect_x -> (adc_indirect_x, adc, Cycle(6)));
+opcode_fn_with_mode!(indirect_y -> (adc_indirect_y, adc,
+                                    page_crossed Cycle(6), or_else Cycle(5)));
 
 #[cfg(test)]
 mod test {

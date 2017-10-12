@@ -11,15 +11,10 @@ fn adc(registers: &mut Registers, val: u8) {
     let carry = if registers.carry_flag() { 1 } else { 0 };
     let temp = val as u16 + a as u16 + carry;
 
-    let zero_flag = temp & 0xFF == 0x00;
-    let sign_flag = (temp >> 7) & 1 == 1;
-    let overflow_flag = (((a ^ val) & 0x80) == 0x00) && ((a as u16 ^ temp) & 0x80) > 0x00;
-    let carry_flag = temp > 0xFF;
-
-    registers.set_zero_flag(zero_flag);
-    registers.set_sign_flag(sign_flag);
-    registers.set_overflow_flag(overflow_flag);
-    registers.set_carry_flag(carry_flag);
+    set_flag!(zero -> (registers, temp));
+    set_flag!(sign -> (registers, temp));
+    set_flag!(overflow -> (registers, a, val, temp));
+    set_flag!(carry -> (registers, temp));
 
     registers.a = temp as u8;
 }

@@ -7,12 +7,10 @@ use cpu::Memory;
 
 #[inline]
 fn lda_assign_register_a(registers: &mut Registers, val: u8) {
-    let zero_flag = val == 0;
-    let sign_flag = (val >> 7) & 1 == 1;
+    set_flag!(zero -> (registers, val));
+    set_flag!(sign -> (registers, val));
 
     registers.a = val;
-    registers.set_zero_flag(zero_flag);
-    registers.set_sign_flag(sign_flag);
 }
 
 pub fn lda_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {

@@ -8,12 +8,10 @@ use cpu::Memory;
 
 #[inline]
 fn ldx_assign_register_x(registers: &mut Registers, val: u8) {
-    let zero_flag = val == 0;
-    let sign_flag = (val >> 7) & 1 == 1;
+    set_flag!(zero -> (registers, val));
+    set_flag!(sign -> (registers, val));
 
     registers.x = val;
-    registers.set_zero_flag(zero_flag);
-    registers.set_sign_flag(sign_flag);
 }
 
 pub fn ldx_imm(registers: &mut Registers, mem: &mut Memory) -> Cycle {

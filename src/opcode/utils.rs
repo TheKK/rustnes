@@ -44,6 +44,28 @@ macro_rules! cross_boundary_cycle_count_add_one_test (
     }
 );
 
+#[macro_export]
+macro_rules! set_flag(
+    (zero -> ($registers: expr, $val: expr)) => {
+        $registers.set_zero_flag($val & 0xFF == 0x00);
+    };
+
+    (sign -> ($registers: expr, $val: expr)) => {
+        $registers.set_sign_flag(($val >> 7) & 1 == 1);
+    };
+
+    (overflow -> ($registers: expr, $operand_a: expr, $operand_b: expr, $result: expr)) => {
+        let flag = ((($operand_a ^ $operand_b) & 0x80) == 0x00) &&
+            (($operand_a as u16 ^ $result) & 0x80) > 0x00;
+
+        $registers.set_overflow_flag(flag);
+    };
+
+    (carry -> ($registers: expr, $val: expr)) => {
+        $registers.set_carry_flag($val > 0xFF);
+    };
+);
+
 pub mod mem {
     use cpu::Memory;
 

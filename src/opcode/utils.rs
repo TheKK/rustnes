@@ -66,132 +66,165 @@ macro_rules! set_flag(
     };
 );
 
-#[macro_export]
-macro_rules! opcode_fn_with_mode(
-    (imm -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+macro_rules! gen_opcode_fn {
+    ($fn_name: ident, $instruction: expr, $cycles_num: expr, $addressing_mode: expr) => {
+
         pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let val = $crate::opcode::utils::mem::read_imm(&mem, pc);
+            let val = $addressing_mode(mem, registers);
 
             $instruction(registers, val);
 
             $cycles_num
         }
+    };
+
+    ($fn_name: ident, $instruction: expr,
+     page_crossed $page_crossed_cycles_num: expr,
+     or_else $normal_cycles_num: expr,
+     $addressing_mode: expr) => {
+
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let (val, page_crossed) = $addressing_mode(mem, registers);
+
+            $instruction(registers, val);
+
+            match page_crossed {
+                true => $page_crossed_cycles_num,
+                false => $normal_cycles_num,
+            }
+        }
+    };
+
+
+    (addr ->
+     $fn_name: ident, $instruction: expr, $cycles_num: expr, $addressing_mode: expr) => {
+
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let addr = $addressing_mode(mem, registers);
+            let val = mem.read(addr);
+
+            let result = $instruction(registers, val);
+            mem.write(addr, result);
+
+            $cycles_num
+        }
+    };
+
+
+    (addr_ignore_page_crossing ->
+     $fn_name: ident, $instruction: expr, $cycles_num: expr, $addressing_mode: expr) => {
+
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            let (addr, _page_crossed) = $addressing_mode(mem, registers);
+            let val = mem.read(addr);
+
+            let result = $instruction(registers, val);
+            mem.write(addr, result);
+
+            $cycles_num
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! opcode_fn_with_mode(
+    (acc -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
+            $instruction(registers, old_a);
+
+            $cycles_num
+        }
+    };
+
+    (zero_page_memory -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        gen_opcode_fn!(addr -> $fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::get_zero_page_addr);
+
+    };
+
+    (zero_page_x_memory -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        gen_opcode_fn!(addr -> $fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::get_zero_page_x_addr);
+    };
+
+    (abs_memory -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        gen_opcode_fn!(addr -> $fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::get_abs_addr);
+    };
+
+    (abs_memory -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        gen_opcode_fn!(addr -> $fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::get_abs_addr);
+    };
+
+    (abs_x_memory -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        gen_opcode_fn!(addr_ignore_page_crossing ->
+                       $fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::get_abs_x_addr);
+    };
+
+    (imm -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        gen_opcode_fn!($fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::read_imm);
     };
 
     (zero_page -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
-        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let val = $crate::opcode::utils::mem::read_zero_page(&mem, pc);
-
-            $instruction(registers, val);
-
-            $cycles_num
-        }
+        gen_opcode_fn!($fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::read_zero_page);
     };
 
     (zero_page_x -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
-        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let x = registers.x;
-            let val = $crate::opcode::utils::mem::read_zero_page_indexed(&mem, pc, x);
-
-            $instruction(registers, val);
-
-            $cycles_num
-        }
+        gen_opcode_fn!($fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::read_zero_page_x);
     };
 
     (zero_page_y -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
-        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let y = registers.y;
-            let val = $crate::opcode::utils::mem::read_zero_page_indexed(&mem, pc, y);
-
-            $instruction(registers, val);
-
-            $cycles_num
-        }
+        gen_opcode_fn!($fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::read_zero_page_y);
     };
 
     (abs -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
-        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let val = $crate::opcode::utils::mem::read_abs(&mem, pc);
-
-            $instruction(registers, val);
-
-            $cycles_num
-        }
+        gen_opcode_fn!($fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::read_abs);
     };
 
     (abs_x -> ($fn_name: ident, $instruction: expr,
                page_crossed $page_crossed_cycles_num: expr,
                or_else $normal_cycles_num: expr)) => {
-        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let x = registers.x;
-            let (val, page_crossed) = $crate::opcode::utils::mem::read_abs_indexed(&mem, pc, x);
 
-            $instruction(registers, val);
-
-            match page_crossed {
-                true => $page_crossed_cycles_num,
-                false => $normal_cycles_num,
-            }
-        }
+        gen_opcode_fn!($fn_name, $instruction,
+                       page_crossed $page_crossed_cycles_num,
+                       or_else $normal_cycles_num,
+                       $crate::opcode::utils::mem::read_abs_x);
     };
 
     (abs_y -> ($fn_name: ident, $instruction: expr,
                page_crossed $page_crossed_cycles_num: expr,
                or_else $normal_cycles_num: expr)) => {
-        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let y = registers.y;
-            let (val, page_crossed) = $crate::opcode::utils::mem::read_abs_indexed(&mem, pc, y);
-
-            $instruction(registers, val);
-
-            match page_crossed {
-                true => $page_crossed_cycles_num,
-                false => $normal_cycles_num,
-            }
-        }
+        gen_opcode_fn!($fn_name, $instruction,
+                       page_crossed $page_crossed_cycles_num,
+                       or_else $normal_cycles_num,
+                       $crate::opcode::utils::mem::read_abs_y);
     };
 
     (indirect_x -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
-        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let x = registers.x;
-            let val = $crate::opcode::utils::mem::read_indirect_x(&mem, pc, x);
-
-            $instruction(registers, val);
-
-            $cycles_num
-        }
+        gen_opcode_fn!($fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::read_indirect_x);
     };
 
     (indirect_y -> ($fn_name: ident, $instruction: expr,
                     page_crossed $page_crossed_cycles_num: expr,
                     or_else $normal_cycles_num: expr)) => {
-        pub fn $fn_name(registers: &mut Registers, mem: &mut Memory) -> Cycle {
-            let pc = registers.pc;
-            let y = registers.y;
-            let (val, page_crossed) = $crate::opcode::utils::mem::read_indirect_y(&mem, pc, y);
-
-            $instruction(registers, val);
-
-            match page_crossed {
-                true => $page_crossed_cycles_num,
-                false => $normal_cycles_num,
-            }
-            // $cycles_num_fn(page_crossed)
-        }
+        gen_opcode_fn!($fn_name, $instruction,
+                       page_crossed $page_crossed_cycles_num,
+                       or_else $normal_cycles_num,
+                       $crate::opcode::utils::mem::read_indirect_y);
     };
 );
 
 pub mod mem {
     use cpu::Memory;
+    use cpu::Registers;
 
     #[inline]
     fn compose_addr(addr_high: u8, addr_low: u8) -> u16 {
@@ -213,46 +246,113 @@ pub mod mem {
     }
 
     #[inline]
-    pub fn read_imm(mem: &Memory, pc: u8) -> u8 {
-        mem.read((pc + 1) as u16)
+    pub fn get_imm_addr(_mem: &Memory, registers: &Registers) -> u16 {
+        let pc = registers.pc;
+
+        (pc + 1) as u16
     }
 
     #[inline]
-    pub fn read_zero_page(mem: &Memory, pc: u8) -> u8 {
-        let addr = mem.read((pc + 1) as u16);
-
-        mem.read(addr as u16)
+    pub fn read_imm(mem: &Memory, registers: &Registers) -> u8 {
+        mem.read(get_imm_addr(mem, registers))
     }
 
     #[inline]
-    pub fn read_zero_page_indexed(mem: &Memory, pc: u8, index: u8) -> u8 {
+    pub fn get_zero_page_addr(mem: &Memory, registers: &Registers) -> u16 {
+        let pc = registers.pc;
+        let addr = mem.read((pc + 1) as u16) as u16;
+
+        addr
+    }
+
+    #[inline]
+    pub fn read_zero_page(mem: &Memory, registers: &Registers) -> u8 {
+        mem.read(get_zero_page_addr(mem, registers))
+    }
+
+    #[inline]
+    pub fn get_zero_page_x_addr(mem: &Memory, registers: &Registers) -> u16 {
+        let pc = registers.pc;
+        let x = registers.x;
         let base_addr = mem.read((pc + 1) as u16);
-        let indexed_addr = (base_addr + index) as u16;
+        let indexed_addr = (base_addr + x) as u16;
 
-        mem.read(indexed_addr)
+        indexed_addr
     }
 
     #[inline]
-    pub fn read_abs(mem: &Memory, pc: u8) -> u8 {
+    pub fn read_zero_page_x(mem: &Memory, registers: &Registers) -> u8 {
+        mem.read(get_zero_page_x_addr(mem, registers))
+    }
+
+    #[inline]
+    pub fn get_zero_page_y_addr(mem: &Memory, registers: &Registers) -> u16 {
+        let pc = registers.pc;
+        let y = registers.y;
+        let base_addr = mem.read((pc + 1) as u16);
+        let indexed_addr = (base_addr + y) as u16;
+
+        indexed_addr
+    }
+
+    #[inline]
+    pub fn read_zero_page_y(mem: &Memory, registers: &Registers) -> u8 {
+        mem.read(get_zero_page_y_addr(mem, registers))
+    }
+
+    #[inline]
+    pub fn get_abs_addr(mem: &Memory, registers: &Registers) -> u16 {
+        let pc = registers.pc;
         let addr_low = mem.read((pc + 1) as u16);
         let addr_high = mem.read((pc + 2) as u16);
         let addr = compose_addr(addr_high, addr_low);
 
-        mem.read(addr)
+        addr
     }
 
     #[inline]
-    pub fn read_abs_indexed(mem: &Memory, pc: u8, index: u8) -> (u8, bool) {
+    pub fn read_abs(mem: &Memory, registers: &Registers) -> u8 {
+        mem.read(get_abs_addr(mem, registers))
+    }
+
+    #[inline]
+    pub fn get_abs_x_addr(mem: &Memory, registers: &Registers) -> (u16, bool) {
+        let pc = registers.pc;
+        let x = registers.x;
         let addr_low = mem.read((pc + 1) as u16);
         let addr_high = mem.read((pc + 2) as u16);
 
-        let (addr, page_crossed) = compose_indexed_addr(addr_high, addr_low, index);
+        compose_indexed_addr(addr_high, addr_low, x)
+    }
+
+    #[inline]
+    pub fn read_abs_x(mem: &Memory, registers: &Registers) -> (u8, bool) {
+        let (addr, page_crossed) = get_abs_x_addr(mem, registers);
 
         (mem.read(addr), page_crossed)
     }
 
     #[inline]
-    pub fn read_indirect_x(mem: &Memory, pc: u8, x: u8) -> u8 {
+    pub fn get_abs_y_addr(mem: &Memory, registers: &Registers) -> (u16, bool) {
+        let pc = registers.pc;
+        let y = registers.y;
+        let addr_low = mem.read((pc + 1) as u16);
+        let addr_high = mem.read((pc + 2) as u16);
+
+        compose_indexed_addr(addr_high, addr_low, y)
+    }
+
+    #[inline]
+    pub fn read_abs_y(mem: &Memory, registers: &Registers) -> (u8, bool) {
+        let (addr, page_crossed) = get_abs_y_addr(mem, registers);
+
+        (mem.read(addr), page_crossed)
+    }
+
+    #[inline]
+    pub fn get_indirect_x_addr(mem: &Memory, registers: &Registers) -> u16 {
+        let pc = registers.pc;
+        let x = registers.x;
         let indirect_addr = mem.read((pc + 1) as u16) + x;
 
         // TODO Figure out how this hardware handle one byte address overflowing.
@@ -262,18 +362,29 @@ pub mod mem {
         let addr_high = mem.read(indirect_addr + 1);
         let addr = compose_addr(addr_high, addr_low);
 
-        mem.read(addr)
+        addr
     }
 
+    #[inline]
+    pub fn read_indirect_x(mem: &Memory, registers: &Registers) -> u8 {
+        mem.read(get_indirect_x_addr(mem, registers))
+    }
 
     #[inline]
-    pub fn read_indirect_y(mem: &Memory, pc: u8, y: u8) -> (u8, bool) {
+    pub fn get_indirect_y_addr(mem: &Memory, registers: &Registers) -> (u16, bool) {
+        let pc = registers.pc;
+        let y = registers.y;
         let indirect_addr = mem.read((pc + 1) as u16) as u16;
 
         let addr_low = mem.read(indirect_addr);
         let addr_high = mem.read(indirect_addr + 1);
 
-        let (addr, page_crossed) = compose_indexed_addr(addr_high, addr_low, y);
+        compose_indexed_addr(addr_high, addr_low, y)
+    }
+
+    #[inline]
+    pub fn read_indirect_y(mem: &Memory, registers: &Registers) -> (u8, bool) {
+        let (addr, page_crossed) = get_indirect_y_addr(mem, registers);
 
         (mem.read(addr), page_crossed)
     }

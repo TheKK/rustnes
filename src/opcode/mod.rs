@@ -3,6 +3,7 @@ mod utils;
 
 mod adc;
 mod and;
+mod asl;
 mod clc;
 mod cld;
 mod cli;
@@ -22,6 +23,7 @@ use cpu::Memory;
 
 use self::adc::*;
 use self::and::*;
+use self::asl::*;
 use self::clc::*;
 use self::cld::*;
 use self::cli::*;
@@ -110,6 +112,12 @@ opcodes!(
     (AndAbsY, 0x39, 2, and_abs_y),
     (AndIndirectX, 0x21, 1, and_indirect_x),
     (AndIndirectY, 0x31, 1, and_indirect_y),
+
+    (AslAcc, 0x0A, 0, asl_register_a),
+    (AslZeroPage, 0x06, 1, asl_zero_page),
+    (AslZeroPageX, 0x16, 1, asl_zero_page_x),
+    (AslAbs, 0x0E, 2, asl_abs),
+    (AslAbsX, 0x1E, 2, asl_abs_x),
 
     (Clc, 0x00, 0, clc_implied),
 

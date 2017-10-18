@@ -1,3 +1,23 @@
+#[inline]
+fn new_page(old_pc: u16, new_pc: u16) -> bool {
+    (old_pc & 0xFF00) != (new_pc & 0xFF00)
+}
+
+// TODO Use math magic to make this faster!!
+// Returned tuple means: (new_pc, page_crossed)
+#[inline]
+pub fn rel_addr(pc: u16, val: u8) -> (u16, bool) {
+    let unsigned_val = ((val << 1) >> 1) as u16;
+    let negtive = (val & 0b10000000) > 0;
+
+    let new_pc = match negtive {
+        true => pc - unsigned_val,
+        false => pc + unsigned_val,
+    };
+
+    (new_pc, new_page(pc, new_pc))
+}
+
 #[macro_export]
 macro_rules! assert_field_eq (
     ($left: expr, $right: expr, [$($field: ident), *]) => {
@@ -183,6 +203,11 @@ macro_rules! opcode_fn_with_mode(
                        $crate::opcode::utils::mem::read_zero_page_y);
     };
 
+    (rel -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
+        gen_opcode_fn!($fn_name, $instruction, $cycles_num,
+                       $crate::opcode::utils::mem::read_rel);
+    };
+
     (abs -> ($fn_name: ident, $instruction: expr, $cycles_num: expr)) => {
         gen_opcode_fn!($fn_name, $instruction, $cycles_num,
                        $crate::opcode::utils::mem::read_abs);
@@ -298,6 +323,13 @@ pub mod mem {
     #[inline]
     pub fn read_zero_page_y(mem: &Memory, registers: &Registers) -> u8 {
         mem.read(get_zero_page_y_addr(mem, registers))
+    }
+
+    #[inline]
+    pub fn read_rel(mem: &Memory, registers: &Registers) -> u8 {
+        let pc = registers.pc;
+
+        mem.read((pc + 1) as u16)
     }
 
     #[inline]
@@ -419,6 +451,10 @@ pub mod test {
         cpu.memory.write(2, val);
 
         cpu.registers.y = 0x02;
+    }
+
+    pub fn arrange_for_rel(cpu: &mut RP2A03, val: u8) {
+        cpu.memory.write(1, val);
     }
 
     pub fn arrange_for_abs(cpu: &mut RP2A03, val: u8) {
@@ -557,6 +593,23 @@ pub mod test {
         let mut cpu = {
             let mut c = RP2A03::new();
             arrange_for_zero_page_y(&mut c, expected_val);
+
+            c
+        };
+
+        target_fn(&mut cpu.registers, &mut cpu.memory);
+
+        assert_eq!(cpu.registers.a, expected_val);
+    }
+
+    #[test]
+    fn opcode_fn_with_mode_rel() {
+        opcode_fn_with_mode!(rel -> (target_fn, dumb_lda, Cycle(0)));
+
+        let expected_val = 0x42;
+        let mut cpu = {
+            let mut c = RP2A03::new();
+            arrange_for_rel(&mut c, expected_val);
 
             c
         };

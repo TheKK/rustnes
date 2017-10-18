@@ -4,6 +4,7 @@ mod utils;
 mod adc;
 mod and;
 mod asl;
+mod bcc;
 mod clc;
 mod cld;
 mod cli;
@@ -24,6 +25,7 @@ use cpu::Memory;
 use self::adc::*;
 use self::and::*;
 use self::asl::*;
+use self::bcc::*;
 use self::clc::*;
 use self::cld::*;
 use self::cli::*;
@@ -118,6 +120,8 @@ opcodes!(
     (AslZeroPageX, 0x16, 1, asl_zero_page_x),
     (AslAbs, 0x0E, 2, asl_abs),
     (AslAbsX, 0x1E, 2, asl_abs_x),
+
+    (Bcc, 0x90, 1, bcc_relative),
 
     (Clc, 0x00, 0, clc_implied),
 

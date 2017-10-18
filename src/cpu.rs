@@ -8,7 +8,7 @@ pub struct Registers {
     pub a: u8,
     pub x: u8,
     pub y: u8,
-    pub pc: u8,
+    pub pc: u16,
     pub sp: u8,
     p: u8,
 }
@@ -101,7 +101,7 @@ impl RP2A03 {
 
         let Cycle(cycles_num) = opcode_fn(&mut self.registers, &mut self.memory);
 
-        self.registers.pc += (1 + opcode.operands_num());
+        self.registers.pc += (1 + opcode.operands_num()) as u16;
         self.current_cycles += cycles_num;
 
         Cycle(cycles_num)

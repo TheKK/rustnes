@@ -5,6 +5,7 @@ mod adc;
 mod and;
 mod asl;
 mod bcc;
+mod bcs;
 mod clc;
 mod cld;
 mod cli;
@@ -26,6 +27,7 @@ use self::adc::*;
 use self::and::*;
 use self::asl::*;
 use self::bcc::*;
+use self::bcs::*;
 use self::clc::*;
 use self::cld::*;
 use self::cli::*;
@@ -122,6 +124,8 @@ opcodes!(
     (AslAbsX, 0x1E, 2, asl_abs_x),
 
     (Bcc, 0x90, 1, bcc_relative),
+
+    (Bcs, 0xB0, 1, bcs_relative),
 
     (Clc, 0x00, 0, clc_implied),
 

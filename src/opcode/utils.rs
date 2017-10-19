@@ -64,6 +64,11 @@ macro_rules! cross_boundary_cycle_count_add_one_test (
     }
 );
 
+#[inline]
+pub fn is_sign(val: u8) -> bool {
+    (val >> 7) & 1 == 1
+}
+
 #[macro_export]
 macro_rules! set_flag(
     (zero -> ($registers: expr, $val: expr)) => {

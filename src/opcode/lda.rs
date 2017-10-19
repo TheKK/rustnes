@@ -1,6 +1,5 @@
 use opcode::Cycle;
 use opcode::OpCode;
-use opcode::utils::mem;
 
 use cpu::Registers;
 use cpu::Memory;

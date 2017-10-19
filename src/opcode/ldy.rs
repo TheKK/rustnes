@@ -1,8 +1,6 @@
 use super::Cycle;
 use super::OpCode;
 
-use opcode::utils::mem;
-
 use cpu::Registers;
 use cpu::Memory;
 

@@ -10,12 +10,12 @@ fn bcs(registers: &mut Registers, offset: u8) -> Cycle {
     let (new_pc, new_page) = utils::rel_addr(registers.pc, offset);
 
     match registers.carry_flag() {
-        false => {
+        true => {
             registers.pc = new_pc;
 
             if new_page { Cycle(4) } else { Cycle(3) }
         }
-        true => Cycle(2),
+        false => Cycle(2),
     }
 }
 
@@ -68,25 +68,12 @@ mod test {
     }
 
     #[test]
-    fn bcs_with_positive_127_offset() {
+    fn bcs_with_positive_127_offset_with_no_carry_flag() {
         let input_value = 127u8;
 
-        let expected_registers = {
-            let mut regs = Registers::new();
-            regs.pc += 127;
+        let expected_registers = Registers::new();
 
-            regs.set_carry_flag(false);
-
-            regs
-        };
-
-        let mut actual_registers = {
-            let mut regs = Registers::new();
-
-            regs.set_carry_flag(false);
-
-            regs
-        };
+        let mut actual_registers = Registers::new();
 
         let _cycle_num = bcs(&mut actual_registers, input_value);
 
@@ -94,14 +81,13 @@ mod test {
     }
 
     #[test]
-    fn bcs_with_negtive_128_offset() {
+    fn bcs_with_negtive_127_offset_with_no_carry_flag() {
         let init_pc = 12345;
         let input_value = 0b11111111;
 
         let expected_registers = {
             let mut regs = Registers::new();
             regs.pc = init_pc;
-            regs.pc -= 127;
 
             regs.set_carry_flag(false);
 
@@ -128,6 +114,7 @@ mod test {
 
         let expected_registers = {
             let mut regs = Registers::new();
+            regs.pc += 127;
 
             regs.set_carry_flag(true);
 
@@ -148,13 +135,14 @@ mod test {
     }
 
     #[test]
-    fn bcs_with_negtive_128_offset_with_carry_flag() {
+    fn bcs_with_negtive_127_offset_with_carry_flag() {
         let init_pc = 12345;
         let input_value = 0b11111111;
 
         let expected_registers = {
             let mut regs = Registers::new();
             regs.pc = init_pc;
+            regs.pc -= 127;
 
             regs.set_carry_flag(true);
 

@@ -10,12 +10,12 @@ fn bcc(registers: &mut Registers, offset: u8) -> Cycle {
     let (new_pc, new_page) = utils::rel_addr(registers.pc, offset);
 
     match registers.carry_flag() {
-        true => {
+        false => {
             registers.pc = new_pc;
 
             if new_page { Cycle(4) } else { Cycle(3) }
         }
-        false => Cycle(2),
+        true => Cycle(2),
     }
 }
 
@@ -68,12 +68,11 @@ mod test {
     }
 
     #[test]
-    fn bcc_with_positive_127_offset() {
+    fn bcc_with_positive_127_offset_with_carry_flag() {
         let input_value = 127u8;
 
         let expected_registers = {
             let mut regs = Registers::new();
-            regs.pc += 127;
 
             regs.set_carry_flag(true);
 
@@ -94,14 +93,13 @@ mod test {
     }
 
     #[test]
-    fn bcc_with_negtive_128_offset() {
+    fn bcc_with_negtive_127_offset_with_carry_flag() {
         let init_pc = 12345;
         let input_value = 0b11111111;
 
         let expected_registers = {
             let mut regs = Registers::new();
             regs.pc = init_pc;
-            regs.pc -= 127;
 
             regs.set_carry_flag(true);
 
@@ -126,7 +124,12 @@ mod test {
     fn bcc_with_positive_127_offset_with_no_carry_flag() {
         let input_value = 127u8;
 
-        let expected_registers = Registers::new();
+        let expected_registers = {
+            let mut regs = Registers::new();
+            regs.pc += 127;
+
+            regs
+        };
 
         let mut actual_registers = Registers::new();
 
@@ -136,13 +139,16 @@ mod test {
     }
 
     #[test]
-    fn bcc_with_negtive_128_offset_with_no_carry_flag() {
+    fn bcc_with_negtive_127_offset_with_no_carry_flag() {
         let init_pc = 12345;
         let input_value = 0b11111111;
 
         let expected_registers = {
             let mut regs = Registers::new();
             regs.pc = init_pc;
+            regs.pc -= 127;
+
+            regs.set_carry_flag(false);
 
             regs
         };
@@ -150,6 +156,8 @@ mod test {
         let mut actual_registers = {
             let mut regs = Registers::new();
             regs.pc = init_pc;
+
+            regs.set_carry_flag(false);
 
             regs
         };

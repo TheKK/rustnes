@@ -1,7 +1,34 @@
+use std::fmt;
+
 use opcode::OpCode;
 use opcode::Cycle;
 
 const MEM_ADDR_MAX: usize = 0xffff;
+
+#[derive(Clone, PartialEq)]
+struct P(u8);
+
+impl P {
+    fn new() -> P {
+        // The unused bit should always be logical one.
+        P(0b00100000)
+    }
+}
+
+impl fmt::Debug for P {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("P")
+            .field("p", &self.0)
+            .field("negative", &(self.0 & (1 << 7) > 0))
+            .field("overflow", &(self.0 & (1 << 6) > 0))
+            .field("break command", &(self.0 & (1 << 4) > 0))
+            .field("decimal mode", &(self.0 & (1 << 3) > 0))
+            .field("interrupt disable", &(self.0 & (1 << 2) > 0))
+            .field("zero", &(self.0 & (1 << 1) > 0))
+            .field("carry", &(self.0 & (1 << 0) > 0))
+            .finish()
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Registers {
@@ -10,7 +37,7 @@ pub struct Registers {
     pub y: u8,
     pub pc: u16,
     pub sp: u8,
-    p: u8,
+    p: P,
 }
 
 impl Registers {
@@ -19,7 +46,7 @@ impl Registers {
             a: 0x00,
             x: 0x00,
             y: 0x00,
-            p: 0b00100000, // The unused bit should always be logical one.
+            p: P::new(),
             pc: 0x00,
             sp: 0x00,
         }
@@ -31,15 +58,15 @@ macro_rules! bit_flag_getter_setter {
         #[inline]
         pub fn $setter_name(&mut self, flag: bool) {
             if flag {
-                self.p |= 1 << $bit_no;
+                self.p.0 |= 1 << $bit_no;
             } else {
-                self.p &= !(1 << $bit_no);
+                self.p.0 &= !(1 << $bit_no);
             }
         }
 
         #[inline]
         pub fn $getter_name(&self) -> bool {
-            ((self.p >> $bit_no) & 1) == 1
+            ((self.p.0 >> $bit_no) & 1) == 1
         }
     }
 }
@@ -47,7 +74,7 @@ macro_rules! bit_flag_getter_setter {
 impl Registers {
     #[inline]
     pub fn p(&self) -> u8 {
-        self.p
+        self.p.0
     }
 
     bit_flag_getter_setter!(set_carry_flag, carry_flag, 0);

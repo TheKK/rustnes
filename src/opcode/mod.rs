@@ -11,6 +11,8 @@ mod bit;
 mod bmi;
 mod bne;
 mod bpl;
+mod bvc;
+mod bvs;
 mod clc;
 mod cld;
 mod cli;
@@ -38,6 +40,8 @@ use self::bit::*;
 use self::bmi::*;
 use self::bne::*;
 use self::bpl::*;
+use self::bvc::*;
+use self::bvs::*;
 use self::clc::*;
 use self::cld::*;
 use self::cli::*;
@@ -144,6 +148,10 @@ opcodes!(
     (Bne, 0xD0, 1, bne_relative),
 
     (Bpl, 0x10, 1, bpl_relative),
+
+    (Bvc, 0x50, 1, bvc_relative),
+
+    (Bvs, 0x70, 1, bvs_relative),
 
     (BitZeroPage, 0x24, 1, bit_zero_page),
     (BitAbs, 0x2C, 2, bit_abs),

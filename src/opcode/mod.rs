@@ -10,6 +10,7 @@ mod beq;
 mod bit;
 mod bmi;
 mod bne;
+mod bpl;
 mod clc;
 mod cld;
 mod cli;
@@ -36,6 +37,7 @@ use self::beq::*;
 use self::bit::*;
 use self::bmi::*;
 use self::bne::*;
+use self::bpl::*;
 use self::clc::*;
 use self::cld::*;
 use self::cli::*;
@@ -140,6 +142,8 @@ opcodes!(
     (Bmi, 0x30, 1, bmi_relative),
 
     (Bne, 0xD0, 1, bne_relative),
+
+    (Bpl, 0x10, 1, bpl_relative),
 
     (BitZeroPage, 0x24, 1, bit_zero_page),
     (BitAbs, 0x2C, 2, bit_abs),

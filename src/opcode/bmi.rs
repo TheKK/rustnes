@@ -84,7 +84,7 @@ mod test {
     }
 
     #[test]
-    fn bmi_with_positive_127_offset_with_zero_flag() {
+    fn bmi_with_positive_127_offset_with_sign_flag() {
         let input_value = 127u8;
 
         let expected_registers = {
@@ -110,7 +110,7 @@ mod test {
     }
 
     #[test]
-    fn bmi_with_negtive_127_offset_with_zero_flag() {
+    fn bmi_with_negtive_127_offset_with_sign_flag() {
         let init_pc = 12345;
         let input_value = 0b11111111;
 
@@ -139,7 +139,7 @@ mod test {
     }
 
     #[test]
-    fn bmi_with_positive_127_offset_with_no_zero_flag() {
+    fn bmi_with_positive_127_offset_with_no_sign_flag() {
         let input_value = 127u8;
 
         let expected_registers = Registers::new();
@@ -152,7 +152,7 @@ mod test {
     }
 
     #[test]
-    fn beq_with_negtive_127_offset_with_no_zero_flag() {
+    fn beq_with_negtive_127_offset_with_no_sign_flag() {
         let init_pc = 12345;
         let input_value = 0b11111111;
 
